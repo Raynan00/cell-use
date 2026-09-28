@@ -74,7 +74,6 @@ final class TransferWork {
         work?.setTaskCompleted(success: success)
         if let identifier {
             BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: identifier)
-            BGTaskScheduler.shared.unregisterTask(withIdentifier: identifier)
         }
         work = nil; identifier = nil; start = nil; expire = nil
     }

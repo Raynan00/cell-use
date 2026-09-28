@@ -40,7 +40,7 @@ struct MoveEvent: Codable, Sendable, Identifiable {
     let note: String
 }
 
-struct MoveReport: Codable, Sendable {
+struct MoveReport: Encodable, Sendable {
     let schema = 1
     let model = "Apple on-device SystemLanguageModel"
     let perception = "Apple Vision text recognition"
