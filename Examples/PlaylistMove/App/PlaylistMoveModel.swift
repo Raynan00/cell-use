@@ -314,6 +314,9 @@ final class PlaylistMoveModel {
                 } else if autoStart {
                     self.preparingScreenshotRun = true
                     self.message = "\(ledger.songs.count) songs found. Connecting to this iPhone."
+                    // Photos may have kept this app suspended long enough for an
+                    // earlier session to go stale. Start a new input session.
+                    await self.disconnect()
                     await self.prepare()
                     try Task.checkCancellation()
                     if !self.connected {
