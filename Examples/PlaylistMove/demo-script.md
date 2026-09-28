@@ -79,7 +79,7 @@ Use the result lines once that take actually completes. Show a full search-and-a
 
 ## Recording notes
 
-The music apps need their normal internet connections. Local AI refers to speech transcription, screen text recognition, and model inference. A screen recording is sufficient; a second camera is optional.
+The music apps need their normal internet connections. Local AI refers to speech transcription, image understanding, and model inference. A screen recording is sufficient; a second camera is optional.
 
 The demo shows a developer SDK operating app interfaces. Playlist transfer is the example task. Keep the launch copy focused on what developers can build with cell-use.
 

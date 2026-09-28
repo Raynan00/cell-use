@@ -187,7 +187,7 @@ final class PlaylistMoveModel {
             let ledger: TransferLedger
             if screenshotMode {
                 guard let draft = screenshotDraft, screenshotReview == nil else { return }
-                ledger = try TransferLedger(recommendations: draft.recommendations, screenText: draft.text, destination: screenshotDestination)
+                ledger = try TransferLedger(imageSongs: draft.songs, destination: screenshotDestination)
             } else {
                 ledger = try TransferLedger(source: source, destination: destination, limit: trackLimit)
             }
@@ -307,7 +307,7 @@ final class PlaylistMoveModel {
                 let draft = try await ScreenshotSongs.extract(image)
                 try Task.checkCancellation()
                 guard self.screenshotGeneration == token else { return }
-                let ledger = try TransferLedger(recommendations: draft.recommendations, screenText: draft.text, destination: destination)
+                let ledger = try TransferLedger(imageSongs: draft.songs, destination: destination)
                 self.screenshotDraft = draft
                 self.screenshotSongs = ledger.songs; self.screenshotReview = draft.reviewReason
                 self.importingScreenshot = false

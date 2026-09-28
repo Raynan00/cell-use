@@ -66,6 +66,31 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertTrue(ledger.verified.isEmpty)
     }
 
+    func testImageInventoryCanRunWithoutOCRAndKeepsAgentAssessmentSeparate() throws {
+        let song = Song(title: "Planet Telex", artist: "")
+        var ledger = try TransferLedger(imageSongs: [song, song], destination: "Comments")
+        XCTAssertEqual(ledger.songs, [song])
+        XCTAssertEqual(ledger.limit, 1)
+        XCTAssertEqual(ledger.service, .spotify)
+        try ledger.recordAttempt(allowMissingArtist: true)
+        ledger.completeFromAgent()
+        XCTAssertEqual(ledger.phase, .completed)
+        XCTAssertTrue(ledger.verified.isEmpty)
+        XCTAssertThrowsError(try TransferLedger(imageSongs: [], destination: "Comments"))
+        XCTAssertThrowsError(try TransferLedger(imageSongs: [Song(title: " ", artist: "")], destination: "Comments"))
+    }
+
+    func testImagePlaylistCaptureAccumulatesAcrossScreens() throws {
+        var ledger = try TransferLedger(source: "Source", destination: "Destination", limit: 5)
+        let first = Song(title: "First", artist: "")
+        try ledger.captureFromAgent([first])
+        XCTAssertEqual(ledger.phase, .reading)
+        try ledger.captureFromAgent([first] + (2...5).map { Song(title: "Song \($0)", artist: "Artist") })
+        XCTAssertEqual(ledger.songs.count, 5)
+        XCTAssertEqual(ledger.phase, .moving)
+        XCTAssertThrowsError(try ledger.captureFromAgent([first]))
+    }
+
     func testEvidenceUsesActualNumberedLinesIncludingWrappedComments() throws {
         let lines = ["someone123", "Song One", "by Artist One", "12 likes"]
         let item = try ScreenshotRecommendation(title: "Song One", artist: "Artist One", firstLine: 2, lastLine: 3, lines: lines)

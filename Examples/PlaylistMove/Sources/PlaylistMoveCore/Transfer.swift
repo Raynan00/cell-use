@@ -81,6 +81,33 @@ public struct TransferLedger: Codable, Sendable {
         self.service = .spotify; self.songs = songs; self.phase = .moving
     }
 
+    /// Inventory read by an image model. No OCR evidence or deterministic verification is implied.
+    public init(imageSongs: [Song], destination: String) throws {
+        guard (1...5).contains(imageSongs.count), !destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              (1...32).contains(destination.utf8.count), destination.utf8.allSatisfy({ (32...126).contains($0) }) else {
+            throw TransferError.invalidConfiguration
+        }
+        var inventory: [Song] = []
+        for candidate in imageSongs {
+            let song = Song(title: candidate.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                            artist: candidate.artist.trimmingCharacters(in: .whitespacesAndNewlines))
+            guard !Song.normalized(song.title).isEmpty else { throw TransferError.nothingToMove }
+            if !inventory.contains(where: { $0.id == song.id }) { inventory.append(song) }
+        }
+        self.source = "Comment screenshot"; self.destination = destination; self.limit = inventory.count
+        self.service = .spotify; self.songs = inventory; self.phase = .moving
+    }
+
+    public mutating func captureFromAgent(_ candidates: [Song]) throws {
+        guard phase == .reading else { throw TransferError.invalidAction }
+        for song in candidates where songs.count < limit {
+            guard !Song.normalized(song.title).isEmpty else { continue }
+            if !songs.contains(where: { $0.id == song.id }) { songs.append(song) }
+        }
+        guard !songs.isEmpty else { throw TransferError.nothingToMove }
+        if songs.count == limit { phase = .moving }
+    }
+
     public var currentSong: Song? { songs.first { !attempted.contains($0.id) } }
 
     public mutating func resolveCurrentSong(_ candidate: Song, screen: [ScreenText]) throws {

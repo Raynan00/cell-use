@@ -279,7 +279,7 @@ struct PlaylistMoveView: View {
                 }
                 Section("Edit") {
                     Text("Export the run timeline afterward. It includes real action timestamps and inference durations. Label any sped-up footage.")
-                    Text("Image text recognition and playlist decisions run on the phone. Spotify still needs its normal network connection.")
+                    Text("Image understanding and playlist decisions run on the phone. Spotify still needs its normal network connection.")
                 }
             }.navigationTitle("Record the demo")
                 .toolbar { Button("Done") { showRecording = false } }

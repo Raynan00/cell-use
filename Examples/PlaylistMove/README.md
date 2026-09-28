@@ -1,8 +1,8 @@
 # Playlist Move
 
-Turn song recommendations from a screenshot into a Spotify playlist, or copy a small Spotify playlist into Apple Music. Built with cell-use, Apple's on-device Foundation Models, and Vision text recognition.
+Turn song recommendations from a screenshot into a Spotify playlist, or copy a small Spotify playlist into Apple Music. Built with cell-use, Apple's on-device Foundation Models with image input.
 
-The model reads the current screen's text and chooses the next action. cell-use delivers taps, gestures, text and keyboard commands. The app keeps a song inventory; the agent inspects the destination and reports when it considers the task complete.
+The model sees the complete current screenshot and chooses the next action. cell-use delivers taps, gestures, text and keyboard commands. The app keeps a song inventory; the agent inspects the destination and reports when it considers the task complete.
 
 ## Build
 
@@ -29,7 +29,7 @@ Sign the configured IPA with the same account and bundle settings. The helper pr
 3. Check the songs and enter a new Spotify playlist name. Tap **Create playlist**. Spotify opens automatically, and the agent searches for the songs and adds them through its interface.
 4. Keep the iPhone unlocked and in portrait. Return after the run to inspect the result and export its timeline.
 
-For the demo, use a screenshot with three readable song recommendations. The agent can correct OCR mistakes, search by title, use Spotify's suggestions and infer the intended recording from the recommendations and results. It chooses its navigation and recovery steps. Hold on the preview long enough to read it, show the extracted songs, then film the automatic Spotify actions with your hands away.
+For the demo, use a screenshot with three readable song recommendations. The agent can interpret misspelled recommendations, search by title, use Spotify's suggestions and infer the intended recording from the recommendations and results. It chooses its navigation and recovery steps. Hold on the preview long enough to read it, show the extracted songs, then film the automatic Spotify actions with your hands away.
 
 ## Optional: hands-free from Photos
 
@@ -43,7 +43,7 @@ If a title cannot be read, the app displays the issue instead of starting. Artis
 
 The foreground handoff through Playlist Move starts its background work before Spotify opens. Pairing, the tunnel, and system permission prompts are one-time setup for the demo, rather than steps to hide during recording.
 
-Siri invokes the shortcut and passes the image to the app. The app's local model reads the image text and chooses the workflow actions; cell-use observes and controls Spotify through the screen. The shortcut contains the handoff action, not Spotify search-and-add steps.
+Siri invokes the shortcut and passes the image to the app. The app's local model reads the image and chooses the workflow actions; cell-use observes and controls Spotify through the screen. The shortcut contains the handoff action, not Spotify search-and-add steps.
 
 ## Move a playlist
 
@@ -63,7 +63,7 @@ The exported JSON includes model-decision timestamps, inference durations, trans
 
 See [the demo script](demo-script.md) for the shot sequence and narration. Keep the first interaction at normal speed, then label sped-up sections while the remaining tracks move.
 
-Playlist inference and text recognition run on the phone. The music apps use their normal internet connections. The optional Photos shortcut uses Siri for activation. Exporting a timeline is an explicit share action; it contains playlist and song names, but no screenshot files or pairing secrets.
+Image understanding and playlist decisions run on the phone. The music apps use their normal internet connections. The optional Photos shortcut uses Siri for activation. Exporting a timeline is an explicit share action; it contains playlist and song names, but no screenshot files or pairing secrets.
 
 Voice recordings are temporary files deleted after transcription or cancellation. Voice input only fills editable fields; it never starts a transfer. The microphone is released before Spotify opens.
 
@@ -73,6 +73,6 @@ Voice recordings are temporary files deleted after transcription or cancellation
 swift test --package-path Examples/PlaylistMove
 ```
 
-`PlaylistMoveCore` contains the inventory, verification rules and grounded actions. `LocalPlaylistAgent` implements `PhoneAgent`; another local model can replace it without changing the transport. The example uses text elements from Vision, rather than sending screenshots to a vision-language model.
+`PlaylistMoveCore` contains the inventory, verification rules and grounded actions. `LocalPlaylistAgent` implements `PhoneAgent`; another local model can replace it without changing the transport. On iOS 27, each decision sends the full screenshot to Foundation Models using an image attachment. Uploaded recommendation images use the same API.
 
-Each observation supplies a fresh action menu. Tap and hold choices carry their visible target labels, so the model selects an action and target together. The report records that choice and label alongside its observation ID.
+The model selects actions and coordinates directly from the image, including unlabeled icons. Coordinates run from 0 to 1000 across the full screenshot and are converted to cell-use normalized coordinates. The report records each action and its observation ID.
