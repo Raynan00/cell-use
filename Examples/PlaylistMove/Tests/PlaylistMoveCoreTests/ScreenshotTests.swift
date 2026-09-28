@@ -55,6 +55,17 @@ final class ScreenshotTests: XCTestCase {
         ]))
     }
 
+    func testDemoCanAdvanceTitleOnlySongsWithoutClaimingDeterministicVerification() throws {
+        let item = ScreenshotRecommendation(title: "planet telexa", artist: "", evidence: "planet telexa")
+        var ledger = try TransferLedger(recommendations: [item], screenText: item.evidence, destination: "Comments")
+        try ledger.recordAttempt(allowMissingArtist: true)
+        XCTAssertEqual(ledger.attempted.count, 1)
+        XCTAssertEqual(ledger.phase, .verifying)
+        ledger.completeFromAgent()
+        XCTAssertEqual(ledger.phase, .completed)
+        XCTAssertTrue(ledger.verified.isEmpty)
+    }
+
     func testEvidenceUsesActualNumberedLinesIncludingWrappedComments() throws {
         let lines = ["someone123", "Song One", "by Artist One", "12 likes"]
         let item = try ScreenshotRecommendation(title: "Song One", artist: "Artist One", firstLine: 2, lastLine: 3, lines: lines)

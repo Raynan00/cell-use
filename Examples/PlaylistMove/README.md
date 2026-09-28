@@ -2,7 +2,7 @@
 
 Turn song recommendations from a screenshot into a Spotify playlist, or copy a small Spotify playlist into Apple Music. Built with cell-use, Apple's on-device Foundation Models, and Vision text recognition.
 
-The model reads the current screen's text and chooses the next action. cell-use delivers taps, gestures, text and keyboard commands. The app keeps a song inventory and checks the destination playlist before reporting completion.
+The model reads the current screen's text and chooses the next action. cell-use delivers taps, gestures, text and keyboard commands. The app keeps a song inventory; the agent inspects the destination and reports when it considers the task complete.
 
 ## Build
 
@@ -29,7 +29,7 @@ Sign the configured IPA with the same account and bundle settings. The helper pr
 3. Check the songs and enter a new Spotify playlist name. Tap **Create playlist**. Spotify opens automatically, and the agent searches for the songs and adds them through its interface.
 4. Keep the iPhone unlocked and in portrait. Return after the run to inspect the result and export its timeline.
 
-For the demo, use a screenshot with three readable song recommendations. When an artist is missing, the agent searches the title and reads the artist from Spotify before adding the song. If the result is ambiguous, it stops for clarification. Hold on the preview long enough to read it, show the extracted songs, then film the automatic Spotify actions with your hands away.
+For the demo, use a screenshot with three readable song recommendations. The agent can correct OCR mistakes, search by title, use Spotify's suggestions and infer the intended recording from the recommendations and results. It chooses its navigation and recovery steps. Hold on the preview long enough to read it, show the extracted songs, then film the automatic Spotify actions with your hands away.
 
 ## Optional: hands-free from Photos
 
@@ -59,7 +59,7 @@ Start with one song. If you stop a run, inspect the destination playlist before 
 
 Use iPhone Screen Recording for readable close-ups, or film the phone with another camera to show your hands away during the actions. Record narration afterward or on the second camera. If using the optional Siri shortcut, test its audio alongside screen recording before the take. Music playback is unnecessary.
 
-The exported JSON includes model-decision timestamps, inference durations, transport acknowledgements and the final inventory. Decision timestamps describe when an action was chosen; the runner records when input was accepted. Use these to align captions with footage. Label sped-up sections and keep the original recording.
+The exported JSON includes model-decision timestamps, inference durations, transport acknowledgements and the final inventory. Completion is labeled `agentJudgment`; the report's `verified` list is reserved for separate deterministic checks. Decision timestamps describe when an action was chosen; the runner records when input was accepted. Use these to align captions with footage. Label sped-up sections and keep the original recording.
 
 See [the demo script](demo-script.md) for the shot sequence and narration. Keep the first interaction at normal speed, then label sped-up sections while the remaining tracks move.
 

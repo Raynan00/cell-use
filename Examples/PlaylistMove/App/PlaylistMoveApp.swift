@@ -121,11 +121,11 @@ struct PlaylistMoveView: View {
                         HStack {
                             Text("The move").font(.title2.bold())
                             Spacer()
-                            Text("\(report.ledger.verified.count)/\(report.ledger.limit) checked").font(.caption.monospaced())
+                            Text("\(report.ledger.attempted.count)/\(report.ledger.limit) reported added").font(.caption.monospaced())
                         }
                         ForEach(report.ledger.songs) { song in
                             HStack {
-                                Image(systemName: report.ledger.verified.contains(song.id) ? "checkmark.circle.fill" : "music.note")
+                                Image(systemName: report.ledger.attempted.contains(song.id) ? "checkmark.circle.fill" : "music.note")
                                     .foregroundStyle(accent)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(song.title).font(.subheadline.bold())

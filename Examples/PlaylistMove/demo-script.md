@@ -18,7 +18,7 @@ Show the extracted songs below the preview and the destination name Comment Sect
 >
 > What would you build?
 
-Keep the screenshot visible long enough to read the recommendations. Crop unrelated comments and identifying details before recording. Use readable song titles; the agent stops for clarification if Spotify results are ambiguous. Show the actual result from the recorded run.
+Keep the screenshot visible long enough to read the recommendations. Crop unrelated comments and identifying details before recording. The agent interprets the titles, searches Spotify and chooses matching recordings. Show the actual result from the recorded run.
 
 Caption the first automatic Spotify action **cell-use is controlling Spotify**. Keep Playlist Move's BUILT WITH CELL-USE header visible in the opening. Credit the local model as Apple Foundation Models in the technical caption or post.
 

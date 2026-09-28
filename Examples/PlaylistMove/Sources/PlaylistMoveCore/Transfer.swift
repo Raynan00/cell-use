@@ -112,8 +112,9 @@ public struct TransferLedger: Codable, Sendable {
         if songs.count == limit { phase = .moving }
     }
 
-    public mutating func recordAttempt() throws {
-        guard phase == .moving, let song = currentSong, !song.artist.isEmpty else { throw TransferError.invalidAction }
+    public mutating func recordAttempt(allowMissingArtist: Bool = false) throws {
+        guard phase == .moving, let song = currentSong,
+              allowMissingArtist || !song.artist.isEmpty else { throw TransferError.invalidAction }
         attempted.append(song.id)
         if attempted.count == songs.count { phase = .verifying }
     }
@@ -130,6 +131,10 @@ public struct TransferLedger: Codable, Sendable {
     }
 
     public mutating func stop(_ reason: String) { phase = .stopped; stopReason = reason }
+
+    /// The demo delegates completion judgment to its agent. This does not add
+    /// entries to `verified`, which is reserved for deterministic screen checks.
+    public mutating func completeFromAgent() { phase = .completed }
 }
 
 public struct ScreenshotRecommendation: Sendable {

@@ -264,7 +264,7 @@ final class PlaylistMoveModel {
         report?.runner = runtime?.snapshot
         if !successful, report?.ledger.phase != .stopped { report?.ledger.stop(runtime?.snapshot.stopReason ?? "Run ended before playlist verification") }
         let service = report?.ledger.service == .spotify ? "Spotify" : "Apple Music"
-        message = successful ? "Playlist created and checked in \(service)." : report?.ledger.stopReason ?? "Transfer stopped"
+        message = successful ? "The agent reports your playlist is ready in \(service)." : report?.ledger.stopReason ?? "Transfer stopped"
         work.finish(success: successful); saveReport()
         Task { await disconnect() }
     }
