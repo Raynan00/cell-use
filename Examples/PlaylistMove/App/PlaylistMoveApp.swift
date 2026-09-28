@@ -1,5 +1,6 @@
 import SwiftUI
 import PlaylistMoveCore
+import PhotosUI
 
 @main
 struct PlaylistMoveApp: App {
@@ -7,10 +8,13 @@ struct PlaylistMoveApp: App {
 }
 
 struct PlaylistMoveView: View {
-    @State private var model = PlaylistMoveModel()
+    @State private var model = PlaylistMoveModel.shared
     @State private var voice = VoiceRequest()
     @State private var showSetup = true
     @State private var showRecording = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var photoLoading = false
+    @State private var photoError: String?
     @Environment(\.scenePhase) private var scenePhase
     private let ink = Color(red: 0.06, green: 0.16, blue: 0.15)
     private let accent = Color(red: 0.1, green: 0.43, blue: 0.34)
@@ -26,11 +30,18 @@ struct PlaylistMoveView: View {
                         .accessibilityLabel("Recording guide")
                 }
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("New app.\nSame soundtrack.")
+                    Text(model.screenshotMode ? "Good comments.\nGreat playlist." : "New app.\nSame soundtrack.")
                         .font(.system(size: 43, weight: .semibold, design: .serif)).tracking(-1.7)
-                    Text("Your playlists, carried across by your iPhone.")
+                    Text(model.screenshotMode ? "Song recommendations, ready to listen to." : "Your playlists, carried across by your iPhone.")
                         .font(.subheadline).foregroundStyle(ink.opacity(0.65))
                 }
+                Picker("Source", selection: $model.screenshotMode) {
+                    Text("Comment screenshot").tag(true)
+                    Text("Move a playlist").tag(false)
+                }.pickerStyle(.segmented).disabled(model.busy || voice.busy || photoLoading)
+                if model.screenshotMode {
+                    screenshotSetup
+                } else {
                 HStack(spacing: 14) {
                     service("Spotify", caption: "FROM", symbol: "waveform", color: .green)
                     Image(systemName: "arrow.right").font(.headline).foregroundStyle(accent)
@@ -68,6 +79,7 @@ struct PlaylistMoveView: View {
                 }
                 .padding(20).background(.white, in: RoundedRectangle(cornerRadius: 22))
                 .disabled(model.busy || voice.busy)
+                }
 
                 if let issue = model.modelIssue {
                     Label(issue, systemImage: "sparkles").font(.callout)
@@ -81,10 +93,10 @@ struct PlaylistMoveView: View {
                     }
                     Text(model.message).font(.callout).fixedSize(horizontal: false, vertical: true)
                     Button(action: model.arm) {
-                        HStack { Text("Move my playlist"); Spacer(); Image(systemName: "arrow.up.right") }
+                        HStack { Text(model.screenshotMode ? "Create playlist" : "Move my playlist"); Spacer(); Image(systemName: "arrow.up.right") }
                             .font(.headline).padding(18)
                             .foregroundStyle(.white).background(accent, in: RoundedRectangle(cornerRadius: 16))
-                    }.disabled(!model.canRun || voice.busy).opacity(model.canRun && !voice.busy ? 1 : 0.45)
+                    }.disabled(!model.canRun || voice.busy || photoLoading).opacity(model.canRun && !voice.busy && !photoLoading ? 1 : 0.45)
                     if model.busy || model.connected {
                         Button("Stop and disconnect", role: .destructive) { model.stop() }.font(.callout)
                     }
@@ -129,7 +141,7 @@ struct PlaylistMoveView: View {
 
                 DisclosureGroup("Connection setup", isExpanded: $showSetup) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Keep LocalDevVPN enabled and Developer Mode on. Apple Music needs a subscription and both apps need to be signed in.")
+                        Text("Keep LocalDevVPN enabled and Developer Mode on. Sign in to Spotify. Playlist transfers to Apple Music also need an Apple Music subscription.")
                         TextField("Tunnel device IP", text: $model.peer)
                             .keyboardType(.decimalPad).textInputAutocapitalization(.never).autocorrectionDisabled()
                         Button("Refresh connection") { Task { await model.refreshConnection() } }.disabled(model.busy)
@@ -159,6 +171,21 @@ struct PlaylistMoveView: View {
             }
             await model.prepare()
         }
+        .task(id: selectedPhoto) {
+            guard let selectedPhoto else { return }
+            photoLoading = true; photoError = nil
+            defer { photoLoading = false }
+            do {
+                guard let data = try await selectedPhoto.loadTransferable(type: Data.self) else { throw ScreenshotError.invalidImage }
+                try Task.checkCancellation()
+                try model.receiveScreenshot(data, destination: model.screenshotDestination, autoStart: false)
+            } catch {
+                if !Task.isCancelled { photoError = error.localizedDescription }
+            }
+        }
+        .onChange(of: model.importingScreenshot) { _, importing in
+            if importing && voice.busy { voice.cancel() }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background {
                 if voice.busy { voice.cancel() }
@@ -168,6 +195,40 @@ struct PlaylistMoveView: View {
         }
         .onChange(of: model.connected) { _, connected in if connected { showSetup = false } }
         .sheet(isPresented: $showRecording) { recordingGuide }
+    }
+
+    private var screenshotSetup: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("SCREENSHOT → SPOTIFY", systemImage: "photo.on.rectangle")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+            Text("In Photos, open your screenshot and say “Siri, playlist this.”")
+                .font(.headline)
+            DisclosureGroup("Set up the voice shortcut once") {
+                Text("In Shortcuts, create “Playlist this”. Turn on Receive What's On Screen and accept Images. Add Playlist Move's Create Spotify Playlist from Image action. Set Image to Shortcut Input and Playlist name to Comment Section. In the input's If there's no input setting, choose Stop and Respond. Run it once to allow access before recording.")
+                    .font(.callout).padding(.top, 8)
+            }.font(.callout)
+            field("SPOTIFY PLAYLIST NAME", text: $model.screenshotDestination).disabled(model.busy || photoLoading)
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Label("Choose screenshot", systemImage: "photo")
+            }.disabled(model.busy || photoLoading)
+            if photoLoading || model.importingScreenshot || model.preparingScreenshotRun {
+                HStack { ProgressView(); Text(model.message).font(.callout) }
+                Button("Cancel") { model.stop(reason: "Screenshot request cancelled") }
+            }
+            if let photoError { Text(photoError).font(.caption).foregroundStyle(.red) }
+            if let reason = model.screenshotReview { Text(reason).font(.callout).foregroundStyle(.orange) }
+            ForEach(model.screenshotSongs) { song in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(song.title).font(.subheadline.bold())
+                    Text(song.artist).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if let image = model.screenshotPreview {
+                DisclosureGroup("Source screenshot") {
+                    Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 280).privacySensitive()
+                }.font(.caption)
+            }
+        }.padding(20).background(.white, in: RoundedRectangle(cornerRadius: 22))
     }
 
     private func service(_ name: String, caption: String, symbol: String, color: Color) -> some View {
@@ -188,13 +249,13 @@ struct PlaylistMoveView: View {
         NavigationStack {
             List {
                 Section("Capture") {
-                    Text("Use iPhone Screen Recording for the whole demo. Start recording before speaking your request, then tap Move and let Spotify open.")
-                    Text("Try a short take first to check microphone audio alongside voice input. You can add narration afterward if needed.")
+                    Text("Open a comment screenshot in Photos. Say Siri, playlist this. Show Playlist Move reading the image, then Spotify opening and filling the playlist while your hands are away.")
+                    Text("A second phone can film your hands leaving the screen. Use simultaneous iPhone Screen Recording for readable close-ups. Test Siri and microphone capture together before the full take.")
                     Text("Keep music playback off. The playlist transfer works without playing the tracks.")
                 }
                 Section("Edit") {
                     Text("Export the run timeline afterward. It includes real action timestamps and inference durations. Label any sped-up footage.")
-                    Text("Screenshots and model decisions stay on the phone. Spotify and Apple Music still need their normal network connections.")
+                    Text("Image text recognition and playlist decisions run on the phone. Siri handles voice activation. Spotify still needs its normal network connection.")
                 }
             }.navigationTitle("Record the demo")
                 .toolbar { Button("Done") { showRecording = false } }

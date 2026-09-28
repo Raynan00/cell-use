@@ -16,6 +16,15 @@ import UserNotifications
 
 @MainActor @Observable
 final class PlaylistMoveModel {
+    static let shared = PlaylistMoveModel()
+    var screenshotMode = true
+    var screenshotDestination = "Comment Section"
+    private(set) var screenshotPreview: UIImage?
+    private(set) var screenshotSongs: [Song] = []
+    private(set) var screenshotReview: String?
+    private(set) var importingScreenshot = false
+    private(set) var preparingScreenshotRun = false
+    private(set) var countdown: Int?
     var source = "Late Night"
     var destination = "Late Night Move"
     var trackLimit = 1
@@ -47,12 +56,23 @@ final class PlaylistMoveModel {
     @ObservationIgnored private var lease: UIBackgroundTaskIdentifier = .invalid
     @ObservationIgnored private var backgrounded = false
     @ObservationIgnored private var epoch = UUID()
+    @ObservationIgnored private var screenshotDraft: ScreenshotSongs?
+    @ObservationIgnored private var screenshotTask: Task<Void, Never>?
+    @ObservationIgnored private var screenshotTimeout: Task<Void, Never>?
+    @ObservationIgnored private var screenshotGeneration = UUID()
+    @ObservationIgnored private var preparingConnection = false
 
-    var busy: Bool { pairing || connecting || running || armed || work.active }
-    var canRun: Bool { connected && inputReady && !busy && modelIssue == nil }
+    var busy: Bool { pairing || connecting || running || armed || work.active || importingScreenshot || preparingScreenshotRun }
+    var canRun: Bool { connected && inputReady && !busy && modelIssue == nil && (!screenshotMode || (!screenshotSongs.isEmpty && screenshotReview == nil)) }
 
     func prepare() async {
+        if preparingConnection {
+            while preparingConnection && !Task.isCancelled { try? await Task.sleep(for: .milliseconds(100)) }
+            return
+        }
         guard client == nil else { modelIssue = LocalPlaylistAgent.availability; return }
+        preparingConnection = true
+        defer { preparingConnection = false }
         modelIssue = LocalPlaylistAgent.availability
         do {
             let route = try ConnectionRoute(mode: .localVPN, peer: peer)
@@ -113,7 +133,7 @@ final class PlaylistMoveModel {
     }
 
     func connect(_ device: DeviceSummary) {
-        guard !busy, !connected, let client else { return }
+        guard !pairing, !connecting, !running, !armed, !work.active, !connected, let client else { return }
         connecting = true
         let token = UUID(); epoch = token
         connectionTask = Task { [weak self] in
@@ -122,7 +142,7 @@ final class PlaylistMoveModel {
                 let opened = try await client.connect(device.id)
                 guard !Task.isCancelled, self.epoch == token else { await opened.disconnect(); return }
                 self.session = opened; self.connecting = false; self.connected = true
-                self.message = "Connected. Open the Spotify playlist, then return here to start."
+                self.message = "Connected. Ready to build your playlist."
                 self.events = Task { [weak self] in
                     do {
                         for try await update in opened.events {
@@ -159,12 +179,18 @@ final class PlaylistMoveModel {
     func arm() {
         guard canRun, let session else { return }
         do {
-            let launchURL = try SpotifyLaunch.url(playlistLink: playlistLink)
+            let launchURL = try SpotifyLaunch.url(playlistLink: screenshotMode ? "" : playlistLink)
             guard UIApplication.shared.canOpenURL(launchURL) else {
                 message = "Install Spotify and sign in before starting a transfer."
                 return
             }
-            let ledger = try TransferLedger(source: source, destination: destination, limit: trackLimit)
+            let ledger: TransferLedger
+            if screenshotMode {
+                guard let draft = screenshotDraft, screenshotReview == nil else { return }
+                ledger = try TransferLedger(recommendations: draft.recommendations, screenText: draft.text, destination: screenshotDestination)
+            } else {
+                ledger = try TransferLedger(source: source, destination: destination, limit: trackLimit)
+            }
             let provider = LocalPlaylistAgent(ledger: ledger)
             let id = session.id.rawValue
             var config = PhoneActionRunner.Configuration()
@@ -203,6 +229,10 @@ final class PlaylistMoveModel {
 
     func sceneChanged(background: Bool) {
         backgrounded = background
+        if background, importingScreenshot || preparingScreenshotRun {
+            cancelScreenshotRequest()
+            message = "Request paused. Keep Playlist Move open until Spotify launches."
+        }
         if background, pairing, lease == .invalid {
             lease = UIApplication.shared.beginBackgroundTask(withName: "Playlist pairing") { [weak self] in
                 Task { @MainActor in self?.pairingTask?.cancel(); self?.endLease() }
@@ -218,6 +248,7 @@ final class PlaylistMoveModel {
     }
 
     func stop(reason: String = "Stopped by you") {
+        cancelScreenshotRequest()
         armed = false; running = false
         runtime?.cancel(reason, notify: false)
         report?.runner = runtime?.snapshot
@@ -232,7 +263,8 @@ final class PlaylistMoveModel {
         armed = false; running = false
         report?.runner = runtime?.snapshot
         if !successful, report?.ledger.phase != .stopped { report?.ledger.stop(runtime?.snapshot.stopReason ?? "Run ended before playlist verification") }
-        message = successful ? "Playlist copied and checked in Apple Music." : report?.ledger.stopReason ?? "Transfer stopped"
+        let service = report?.ledger.service == .spotify ? "Spotify" : "Apple Music"
+        message = successful ? "Playlist created and checked in \(service)." : report?.ledger.stopReason ?? "Transfer stopped"
         work.finish(success: successful); saveReport()
         Task { await disconnect() }
     }
@@ -245,6 +277,94 @@ final class PlaylistMoveModel {
     }
     private func endLease() {
         if lease != .invalid { UIApplication.shared.endBackgroundTask(lease); lease = .invalid }
+    }
+
+    func receiveScreenshot(_ data: Data, destination: String, autoStart: Bool) throws {
+        guard !busy else { throw ScreenshotError.busy }
+        guard !data.isEmpty, data.count <= 25_000_000 else { throw ScreenshotError.invalidImage }
+        let token = UUID(); screenshotGeneration = token
+        screenshotMode = true; screenshotDestination = destination
+        screenshotDraft = nil; screenshotSongs = []; screenshotReview = nil; screenshotPreview = nil
+        report = nil; reportURL = nil; importingScreenshot = true
+        message = "Reading song recommendations on your iPhone"
+        screenshotTimeout = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(90))
+            guard !Task.isCancelled, let self, self.screenshotGeneration == token else { return }
+            self.cancelScreenshotRequest(); self.message = "The screenshot request took too long. Try again."
+        }
+        screenshotTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                // Siri can deliver the request during the foreground transition.
+                for _ in 0..<100 {
+                    if UIApplication.shared.applicationState == .active { break }
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                guard UIApplication.shared.applicationState == .active else { throw ScreenshotError.notForeground }
+                guard LocalPlaylistAgent.availability == nil else { throw ScreenshotError.modelUnavailable }
+                let (draft, preview) = try await ScreenshotSongs.extract(data)
+                try Task.checkCancellation()
+                guard self.screenshotGeneration == token else { return }
+                let ledger = try TransferLedger(recommendations: draft.recommendations, screenText: draft.text, destination: destination)
+                self.screenshotDraft = draft; self.screenshotPreview = preview
+                self.screenshotSongs = ledger.songs; self.screenshotReview = draft.reviewReason
+                self.importingScreenshot = false
+                if let reason = draft.reviewReason {
+                    self.message = "Please check the screenshot: \(reason)"
+                } else if autoStart {
+                    self.preparingScreenshotRun = true
+                    self.message = "\(ledger.songs.count) songs found. Connecting to this iPhone."
+                    await self.prepare()
+                    try Task.checkCancellation()
+                    if !self.connected {
+                        var requestedConnection = false
+                        for _ in 0..<100 {
+                            try Task.checkCancellation()
+                            guard UIApplication.shared.applicationState == .active else { throw ScreenshotError.notForeground }
+                            if !requestedConnection {
+                                guard self.devices.count <= 1 else { throw ScreenshotError.connection }
+                                if let device = self.devices.first, device.reachability == .reachable {
+                                    self.connect(device); requestedConnection = true
+                                }
+                            }
+                            if self.connected { break }
+                            try await Task.sleep(for: .milliseconds(200))
+                        }
+                    }
+                    guard self.connected else { throw ScreenshotError.connection }
+                    for _ in 0..<50 {
+                        if self.inputReady { break }
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                    guard self.inputReady else { throw ScreenshotError.notReady }
+                    for seconds in (1...3).reversed() {
+                        try Task.checkCancellation()
+                        guard UIApplication.shared.applicationState == .active else { throw ScreenshotError.notForeground }
+                        self.countdown = seconds
+                        self.message = "Creating \(destination) in Spotify in \(seconds)…"
+                        try await Task.sleep(for: .seconds(1))
+                    }
+                    try Task.checkCancellation()
+                    guard self.screenshotGeneration == token, UIApplication.shared.applicationState == .active else { throw ScreenshotError.notForeground }
+                    self.preparingScreenshotRun = false; self.countdown = nil
+                    self.arm()
+                } else {
+                    self.message = "\(ledger.songs.count) recommendations ready. Tap Create playlist when you're ready."
+                }
+                self.screenshotTimeout?.cancel()
+            } catch {
+                guard self.screenshotGeneration == token else { return }
+                self.importingScreenshot = false; self.preparingScreenshotRun = false; self.countdown = nil
+                self.screenshotTimeout?.cancel()
+                self.message = error.localizedDescription
+            }
+        }
+    }
+
+    func cancelScreenshotRequest() {
+        screenshotGeneration = UUID(); screenshotTask?.cancel(); screenshotTimeout?.cancel()
+        screenshotTask = nil; screenshotTimeout = nil
+        importingScreenshot = false; preparingScreenshotRun = false; countdown = nil
     }
     private func saveReport() {
         guard let report else { return }

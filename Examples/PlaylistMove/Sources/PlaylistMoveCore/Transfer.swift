@@ -32,10 +32,12 @@ public enum TransferError: String, Error, Sendable {
 }
 
 public struct TransferLedger: Codable, Sendable {
+    public enum Service: String, Codable, Sendable { case appleMusic, spotify }
     public enum Phase: String, Codable, Sendable { case reading, moving, verifying, completed, stopped }
     public let source: String
     public let destination: String
     public let limit: Int
+    public var service: Service = .appleMusic
     public private(set) var phase: Phase = .reading
     public private(set) var songs: [Song] = []
     public private(set) var attempted: [String] = []
@@ -48,6 +50,20 @@ public struct TransferLedger: Codable, Sendable {
               destination.utf8.allSatisfy({ (32...126).contains($0) }),
               [1, 5].contains(limit) else { throw TransferError.invalidConfiguration }
         self.source = source; self.destination = destination; self.limit = limit
+    }
+
+    public init(recommendations: [ScreenshotRecommendation], screenText: String, destination: String) throws {
+        guard (1...5).contains(recommendations.count), !destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              (1...32).contains(destination.utf8.count), destination.utf8.allSatisfy({ (32...126).contains($0) }) else {
+            throw TransferError.invalidConfiguration
+        }
+        var songs: [Song] = []
+        for item in recommendations {
+            let song = try item.validated(in: screenText)
+            if !songs.contains(where: { $0.id == song.id }) { songs.append(song) }
+        }
+        self.source = "Comment screenshot"; self.destination = destination; self.limit = songs.count
+        self.service = .spotify; self.songs = songs; self.phase = .moving
     }
 
     public var currentSong: Song? { songs.first { !attempted.contains($0.id) } }
@@ -89,6 +105,28 @@ public struct TransferLedger: Codable, Sendable {
     }
 
     public mutating func stop(_ reason: String) { phase = .stopped; stopReason = reason }
+}
+
+public struct ScreenshotRecommendation: Sendable {
+    public let title: String
+    public let artist: String
+    public let evidence: String
+    public init(title: String, artist: String, evidence: String) {
+        self.title = title; self.artist = artist; self.evidence = evidence
+    }
+    public func validated(in screenText: String) throws -> Song {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let artist = artist.trimmingCharacters(in: .whitespacesAndNewlines)
+        let proof = Song.normalized(evidence)
+        let songTitle = Song.normalized(title), songArtist = Song.normalized(artist)
+        func containsWords(_ haystack: String, _ needle: String) -> Bool {
+            (" " + haystack + " ").contains(" " + needle + " ")
+        }
+        guard !songTitle.isEmpty, !songArtist.isEmpty, !proof.isEmpty,
+              containsWords(Song.normalized(screenText), proof),
+              containsWords(proof, songTitle), containsWords(proof, songArtist) else { throw TransferError.songNotVisible }
+        return Song(title: title, artist: artist)
+    }
 }
 
 public enum GroundedAction {
