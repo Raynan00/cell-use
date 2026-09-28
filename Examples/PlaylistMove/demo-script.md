@@ -1,5 +1,23 @@
 # Playlist Move demo
 
+## Screenshot concept: Comment Section
+
+Proposed next demo flow: import a screenshot of song recommendations, review the extracted track list, then build a Spotify playlist through its interface. This flow needs screenshot import and a Spotify destination added to the app.
+
+> The best song recommendations are buried in the comments. I wanted them in a playlist.
+
+Show a real TikTok comment screenshot with three clear song recommendations. Import it into the app and say:
+
+> Make this a Spotify playlist called Comment Section.
+
+Show the extracted titles and artists for review. Start the run, then show Spotify opening, a complete search-and-add interaction, and the remaining songs being added. End on the finished playlist.
+
+> A screenshot became a playlist. The AI ran on my iPhone, and cell-use did the tapping.
+>
+> What would you build?
+
+Keep the screenshot visible long enough to read the recommendations. Crop unrelated comments and identifying details before recording. Resolve unclear titles or missing artists in the review step. Show the actual result from the recorded run.
+
 ## The hook
 
 > What if your iPhone could do the tapping?
