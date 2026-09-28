@@ -31,7 +31,7 @@ struct ScreenshotSongs {
     let reviewReason: String?
 
     @MainActor
-    static func extract(_ data: Data) async throws -> (ScreenshotSongs, UIImage) {
+    static func decode(_ data: Data) throws -> CGImage {
         guard data.count <= 25_000_000,
               let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
@@ -39,7 +39,11 @@ struct ScreenshotSongs {
                 kCGImageSourceCreateThumbnailWithTransform: true,
                 kCGImageSourceThumbnailMaxPixelSize: 3000
               ] as CFDictionary) else { throw ScreenshotError.invalidImage }
-        let preview = UIImage(cgImage: image)
+        return image
+    }
+
+    @MainActor
+    static func extract(_ image: CGImage) async throws -> ScreenshotSongs {
         let text = try await Task.detached(priority: .userInitiated) {
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
@@ -65,8 +69,8 @@ struct ScreenshotSongs {
         let items = result.songs.map { ScreenshotRecommendation(title: $0.title, artist: $0.artist, evidence: $0.evidence) }
         for item in items { _ = try item.validated(in: text) }
         guard !items.isEmpty else { throw ScreenshotError.noSongs }
-        return (ScreenshotSongs(recommendations: items, text: text,
-            reviewReason: result.needsReview ? (result.reviewReason.isEmpty ? "Some recommendations need a clearer title and artist." : result.reviewReason) : nil), preview)
+        return ScreenshotSongs(recommendations: items, text: text,
+            reviewReason: result.needsReview ? (result.reviewReason.isEmpty ? "Some recommendations need a clearer title and artist." : result.reviewReason) : nil)
     }
 }
 

@@ -2,17 +2,17 @@
 
 ## Screenshot concept: Comment Section
 
-Demo flow: open a song-recommendation screenshot in Photos, invoke the Playlist this shortcut by voice, and let Playlist Move create a Spotify playlist through its interface. Set up the shortcut and complete a device rehearsal before filming.
+Demo flow: choose a song-recommendation screenshot in Playlist Move, show its large preview and extracted songs, then create a Spotify playlist through its interface. Complete connection setup and a device rehearsal before filming.
 
 > The best song recommendations are buried in the comments. I wanted them in a playlist.
 
-Show a real TikTok comment screenshot with three clear song-and-artist recommendations open in Photos. With hands visibly away from the phone, say:
+Show a real TikTok comment screenshot with three clear song-and-artist recommendations in Playlist Move's expanded preview. It appears as soon as the image is loaded, while the app reads it. Say:
 
-> Siri, playlist this.
+> I gave this app a screenshot. Now watch my phone.
 
-Siri runs the shortcut configured to create Comment Section. Keep the handoff into Playlist Move visible: the extracted songs, Cancel countdown, and BUILT WITH CELL-USE label. Spotify then opens. Show a complete search-and-add interaction at normal speed and the remaining songs being added. End on the finished playlist. No confirmation tap is needed for clear recommendations after setup.
+Show the extracted songs below the preview and the destination name Comment Section. Tap Create playlist, then move your hands away. Keep Spotify opening in the recording. Show a complete search-and-add interaction at normal speed and the remaining songs being added. End on the finished playlist.
 
-> Siri starts it. The agent uses cell-use to do the work.
+> It opens Spotify, finds the songs, and builds the playlist.
 >
 > A screenshot became a playlist. The playlist model ran on my iPhone, and cell-use did the tapping.
 >
@@ -20,16 +20,18 @@ Siri runs the shortcut configured to create Comment Section. Keep the handoff in
 
 Keep the screenshot visible long enough to read the recommendations. Crop unrelated comments and identifying details before recording. Use clear title-and-artist recommendations; the app stops for unclear input. Show the actual result from the recorded run.
 
-Caption the first automatic Spotify action **cell-use is controlling Spotify**. The voice shortcut launches Playlist Move and supplies the image; it does not contain the Spotify search-and-add workflow. Credit the local model as Apple Foundation Models in the technical caption or post.
+Caption the first automatic Spotify action **cell-use is controlling Spotify**. Keep Playlist Move's BUILT WITH CELL-USE header visible in the opening. Credit the local model as Apple Foundation Models in the technical caption or post.
 
 | Shot | Phone screen | Caption |
 | --- | --- | --- |
-| 1 | Photos, comments readable, hands away | This comment section is about to become a playlist. |
-| 2 | Say Siri, playlist this; keep the app handoff visible | Voice shortcut → Playlist Move |
-| 3 | Playlist Move extracts songs and counts down | On-device playlist agent · built with cell-use |
+| 1 | Playlist Move, screenshot preview readable | This comment section is about to become a playlist. |
+| 2 | Extracted song titles and artists below the screenshot | Read on this iPhone |
+| 3 | Tap Create playlist, then move hands away | Built with cell-use |
 | 4 | Spotify opens, searches, and adds first song | cell-use is controlling Spotify |
 | 5 | Remaining songs added, actual speed-up labeled | Screenshots · taps · swipes · typing |
 | 6 | Finished Comment Section playlist | What would you build? github.com/Raynan00/cell-use |
+
+Optional hands-free take: open the screenshot in Photos and say **Siri, playlist this** using the configured shortcut. Keep the handoff into Playlist Move visible and caption it **Siri launches the app. cell-use controls Spotify.** The in-app upload is the main cut so viewers see the source image and the app that performs the task.
 
 ## Alternative: playlist transfer
 

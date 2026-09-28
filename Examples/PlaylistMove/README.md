@@ -14,7 +14,16 @@ bash Scripts/build-macos.sh PlaylistMove
 
 The unsigned archive is `.build/playlist-move-unsigned.ipa`. The `Build Playlist Move` GitHub workflow produces the same archive. Sign it for your iPhone before installation.
 
-## Hands-free from Photos
+## Screenshot to Spotify
+
+1. Sign in to Spotify, enable Apple Intelligence and finish its model download. Keep Developer Mode and the local tunnel enabled. Pair and connect Playlist Move through Connection setup.
+2. Tap **Choose screenshot**. The image appears at full card width while the local model reads its recommendations. The preview stays expanded above the extracted song titles and artists.
+3. Check the songs and enter a new Spotify playlist name. Tap **Create playlist**. Spotify opens automatically, and the agent searches for the songs and adds them through its interface.
+4. Keep the iPhone unlocked and in portrait. Return after the run to inspect the result and export its timeline.
+
+For the demo, use a screenshot with three clear song-and-artist recommendations. Hold on the preview long enough to read it, show the extracted songs, then film the automatic Spotify actions with your hands away.
+
+## Optional: hands-free from Photos
 
 1. Sign in to Spotify, enable Apple Intelligence and finish its model download. Keep Developer Mode and the local tunnel enabled. Pair Playlist Move once through Connection setup.
 2. Create a shortcut named **Playlist this** in Apple's Shortcuts app. In its Details, enable **Receive What's On Screen**. Accept **Images** as input. Set **If there's no input** to **Stop and Respond**, with a message to open the screenshot in Photos.
@@ -22,7 +31,7 @@ The unsigned archive is `.build/playlist-move-unsigned.ipa`. The `Build Playlist
 4. Run the shortcut once to grant any system access prompts before recording. It uses the supplied image, without searching your photo library for another image.
 5. Open a readable screenshot in Photos and say **Siri, playlist this**. Playlist Move opens, extracts up to five explicit title-and-artist recommendations, connects to the paired phone, and shows a three-second Cancel countdown. Spotify then opens and the agent creates the playlist.
 
-If a recommendation needs clarification, the app displays the issue instead of starting. Use a screenshot with clear song titles and artists for the first run. A **Choose screenshot** button is also available for direct import and inspection.
+If a recommendation needs clarification, the app displays the issue instead of starting. Use a screenshot with clear song titles and artists for the first run.
 
 The foreground handoff through Playlist Move starts its background work before Spotify opens. Pairing, the tunnel, and system permission prompts are one-time setup for the demo, rather than steps to hide during recording.
 
@@ -40,13 +49,13 @@ Start with one song. If you stop a run, inspect the destination playlist before 
 
 ## Recording
 
-Use iPhone Screen Recording for the whole demo, or film the phone with another camera to show your hands away during the actions. Check a short take to confirm Siri and microphone audio alongside screen recording. Narration can be recorded afterward. Music playback is unnecessary.
+Use iPhone Screen Recording for readable close-ups, or film the phone with another camera to show your hands away during the actions. Record narration afterward or on the second camera. If using the optional Siri shortcut, test its audio alongside screen recording before the take. Music playback is unnecessary.
 
 The exported JSON includes model-decision timestamps, inference durations, transport acknowledgements and the final inventory. Decision timestamps describe when an action was chosen; the runner records when input was accepted. Use these to align captions with footage. Label sped-up sections and keep the original recording.
 
 See [the demo script](demo-script.md) for the shot sequence and narration. Keep the first interaction at normal speed, then label sped-up sections while the remaining tracks move.
 
-Playlist inference and text recognition run on the phone. Siri handles the voice trigger using the user's system configuration; the music apps use their normal internet connections. Exporting a timeline is an explicit share action; it contains playlist and song names, but no screenshot files or pairing secrets.
+Playlist inference and text recognition run on the phone. The music apps use their normal internet connections. The optional Photos shortcut uses Siri for activation. Exporting a timeline is an explicit share action; it contains playlist and song names, but no screenshot files or pairing secrets.
 
 Voice recordings are temporary files deleted after transcription or cancellation. Voice input only fills editable fields; it never starts a transfer. The microphone is released before Spotify opens.
 

@@ -282,9 +282,11 @@ final class PlaylistMoveModel {
     func receiveScreenshot(_ data: Data, destination: String, autoStart: Bool) throws {
         guard !busy else { throw ScreenshotError.busy }
         guard !data.isEmpty, data.count <= 25_000_000 else { throw ScreenshotError.invalidImage }
+        let image = try ScreenshotSongs.decode(data)
         let token = UUID(); screenshotGeneration = token
         screenshotMode = true; screenshotDestination = destination
-        screenshotDraft = nil; screenshotSongs = []; screenshotReview = nil; screenshotPreview = nil
+        screenshotDraft = nil; screenshotSongs = []; screenshotReview = nil
+        screenshotPreview = UIImage(cgImage: image)
         report = nil; reportURL = nil; importingScreenshot = true
         message = "Reading song recommendations on your iPhone"
         screenshotTimeout = Task { [weak self] in
@@ -302,11 +304,11 @@ final class PlaylistMoveModel {
                 }
                 guard UIApplication.shared.applicationState == .active else { throw ScreenshotError.notForeground }
                 guard LocalPlaylistAgent.availability == nil else { throw ScreenshotError.modelUnavailable }
-                let (draft, preview) = try await ScreenshotSongs.extract(data)
+                let draft = try await ScreenshotSongs.extract(image)
                 try Task.checkCancellation()
                 guard self.screenshotGeneration == token else { return }
                 let ledger = try TransferLedger(recommendations: draft.recommendations, screenText: draft.text, destination: destination)
-                self.screenshotDraft = draft; self.screenshotPreview = preview
+                self.screenshotDraft = draft
                 self.screenshotSongs = ledger.songs; self.screenshotReview = draft.reviewReason
                 self.importingScreenshot = false
                 if let reason = draft.reviewReason {
