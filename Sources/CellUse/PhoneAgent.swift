@@ -1,21 +1,26 @@
 import Foundation
 
+public enum PhoneKey: String, Codable, Sendable, Equatable {
+    case enter, backspace, selectAll
+}
+
 /// Coordinates are fractions of the full portrait screenshot, in [0, 1).
 public enum PhoneAction: Codable, Sendable, Equatable {
     case tap(x: Double, y: Double)
     case swipe(fromX: Double, fromY: Double, toX: Double, toY: Double, duration: Double)
     /// Printable US-ASCII only, 1...32 characters. No implicit Return.
     case typeText(String)
+    case pressKey(PhoneKey)
     case wait(seconds: Double)
     case finish
 }
 
 extension PhoneAction {
     public var isInput: Bool {
-        switch self { case .tap, .swipe, .typeText: true; case .wait, .finish: false }
+        switch self { case .tap, .swipe, .typeText, .pressKey: true; case .wait, .finish: false }
     }
     public var kind: String {
-        switch self { case .tap: "tap"; case .swipe: "swipe"; case .typeText: "typeText"; case .wait: "wait"; case .finish: "finish" }
+        switch self { case .tap: "tap"; case .swipe: "swipe"; case .typeText: "typeText"; case .pressKey: "pressKey"; case .wait: "wait"; case .finish: "finish" }
     }
     public var inputValidationError: String? {
         func point(_ x: Double, _ y: Double) -> Bool { x.isFinite && y.isFinite && (0..<1).contains(x) && (0..<1).contains(y) }
@@ -25,6 +30,7 @@ extension PhoneAction {
             return point(x, y) && point(endX, endY) && (x != endX || y != endY) && duration.isFinite && (0.2...1).contains(duration) ? nil : "invalidSwipe"
         case let .typeText(text):
             return (1...32).contains(text.utf8.count) && text.utf8.allSatisfy { (32...126).contains($0) } ? nil : "unsupportedText"
+        case .pressKey: return nil
         case .wait, .finish: return "notInput"
         }
     }

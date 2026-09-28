@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """Package a compiled .app preserving modes. This is not a signed installable IPA."""
 import stat
+import argparse
 import zipfile
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-app = root / ".build/DerivedData/Build/Products/Debug-iphoneos/CellUseDemo.app"
-if not app.is_dir() or not (app / "CellUseDemo").is_file():
-    raise SystemExit("Compiled CellUseDemo.app not found; run the macOS build first.")
-output = root / ".build/cell-use-demo-unsigned.ipa"
+parser = argparse.ArgumentParser()
+parser.add_argument("scheme", nargs="?", default="CellUseDemo", choices=["CellUseDemo", "PlaylistMove"])
+scheme = parser.parse_args().scheme
+app = root / f".build/DerivedData/Build/Products/Debug-iphoneos/{scheme}.app"
+if not app.is_dir() or not (app / scheme).is_file():
+    raise SystemExit(f"Compiled {scheme}.app not found; run the macOS build first.")
+output = root / (".build/playlist-move-unsigned.ipa" if scheme == "PlaylistMove" else ".build/cell-use-demo-unsigned.ipa")
 with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
     for path in sorted(app.rglob("*")):
-        name = "Payload/CellUseDemo.app/" + path.relative_to(app).as_posix()
+        name = f"Payload/{scheme}.app/" + path.relative_to(app).as_posix()
         if path.is_symlink():
             info = zipfile.ZipInfo(name)
             info.create_system = 3

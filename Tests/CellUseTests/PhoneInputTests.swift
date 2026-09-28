@@ -2,6 +2,22 @@ import Foundation
 import Testing
 @testable import CellUse
 
+@Test @MainActor func keyboardCommandsAreExplicitAndCancelledBeforeDelivery() async throws {
+    for key in [PhoneKey.enter, .backspace, .selectAll] {
+        var events: [PhoneInputEvent] = []
+        try await PhoneInputDelivery.deliver(.pressKey(key), contextIsValid: { true }, send: { events.append($0) })
+        #expect(events == [.key(key)])
+        events = []
+        do {
+            try await PhoneInputDelivery.deliver(.pressKey(key), contextIsValid: { false }, send: { events.append($0) })
+            Issue.record("A changed context must reject keyboard input")
+        } catch {}
+        #expect(events == [.releaseAll])
+        let encoded = try JSONEncoder().encode(PhoneAction.pressKey(key))
+        #expect(try JSONDecoder().decode(PhoneAction.self, from: encoded) == .pressKey(key))
+    }
+}
+
 @Test @MainActor func swipeHasOrderedEdgesAndNoRetryAfterPartialFailure() async throws {
     let action = PhoneAction.swipe(fromX: 0.5, fromY: 0.8, toX: 0.5, toY: 0.2, duration: 0.6)
     var events: [PhoneInputEvent] = []

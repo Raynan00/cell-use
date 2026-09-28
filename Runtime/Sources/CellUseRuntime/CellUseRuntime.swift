@@ -124,6 +124,9 @@ public final class CellUseRuntime {
             let nativePhase: TouchPhase = switch phase { case .began: .began; case .moved: .moved; case .ended: .ended }
             return .touch(TouchCommand(contactID: 0, point: point(x, y), phase: nativePhase))
         case let .character(character): return .keyTap(.character(character), modifiers: [])
+        case .key(.enter): return .keyTap(.return, modifiers: [])
+        case .key(.backspace): return .keyTap(.delete, modifiers: [])
+        case .key(.selectAll): return .keyTap(.character("a"), modifiers: [.command])
         case .releaseAll: return .releaseAllInput
         }
     }

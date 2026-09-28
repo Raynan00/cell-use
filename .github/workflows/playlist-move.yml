@@ -1,0 +1,36 @@
+name: Build Playlist Move
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/playlist-move]
+    paths:
+      - Examples/PlaylistMove/**
+      - Sources/**
+      - Runtime/**
+      - Patches/**
+      - dependencies.json
+      - project.yml
+      - Scripts/**
+      - .github/workflows/playlist-move.yml
+permissions:
+  contents: read
+jobs:
+  ios-build:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare tools
+        run: |
+          brew install xcodegen ripgrep
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup-init.sh
+            sh /tmp/rustup-init.sh -y --profile minimal --no-modify-path
+          fi
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - run: bash Scripts/build-macos.sh PlaylistMove
+      - uses: actions/upload-artifact@v4
+        if: always() && !cancelled()
+        with:
+          name: playlist-move-unsigned
+          path: .build/playlist-move-unsigned.ipa
+          if-no-files-found: ignore

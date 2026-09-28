@@ -379,7 +379,7 @@
 +    controls.enable_input();
 +    emitter.input_ready()?;
 +    let mut cleanup = InputCleanupState::default();
-+    let deadline = tokio::time::sleep(Duration::from_secs(120));
++    let deadline = tokio::time::sleep(Duration::from_secs(900));
 +    tokio::pin!(deadline);
 +    let result = 'probe: loop {
 +        let capture = async {

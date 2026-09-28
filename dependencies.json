@@ -4,7 +4,7 @@
     "revision": "1fcdfb0a6799b62f05625d0cbb359bec57256b94",
     "probePatch": {
       "path": "Patches/devicehub-media-diagnostics.patch",
-      "sha256": "be450f05af57a786b964ef5926b142797dba8a117902b3996564cb5b7df750fb",
+      "sha256": "e5c6598b6670633ec1d112939e274d64030e24817c8570877c6f2358ddabff56",
       "files": {
         "Packages/DeviceHubKit/Sources/DeviceHubMedia/DeviceHubMedia.swift": {
           "before": "af3f4f88be05ee72d52458fc3462a8b25dfd83205248576695743bc23dcf3ccc",
@@ -36,7 +36,7 @@
         },
         "Rust/DeviceHubFFI/src/protocol.rs": {
           "before": "5ab0378f73996a9dfccdb02cc7505fa121aba6f64ac35e847fe63801c844e46a",
-          "after": "fadf0299f058f06281fd749cefa2e24b8c7ef74c68127b9c42e7d6a91ad48b00"
+          "after": "c8d16112dbba3f91686d947c6885f3e940703ad63ace4675c0583552251c748e"
         },
         "Sources/DeviceHubLive/DeviceHubNativeInputMarshaller.swift": {
           "before": "c987f9febd80ce1a7e344fd2632323be609ddc6332e1497dcc9b47393eea11c1",

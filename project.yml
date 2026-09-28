@@ -15,6 +15,8 @@ packages:
     path: Runtime
   DeviceHubKit:
     path: .build/devicehub/Packages/DeviceHubKit
+  PlaylistMoveCore:
+    path: Examples/PlaylistMove
 targets:
   DeviceHubPrivateMedia:
     type: framework
@@ -120,8 +122,59 @@ targets:
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: NO
+  PlaylistMove:
+    type: application
+    platform: iOS
+    sources:
+      - path: Examples/PlaylistMove/App
+      - path: Runtime/Sources/PhoneProbeRouting
+      - path: THIRD_PARTY_NOTICES.md
+        buildPhase: resources
+      - path: LICENSE
+        buildPhase: resources
+      - path: Licenses/DeviceHub-MIT.txt
+        buildPhase: resources
+      - path: .build/devicehub/Licenses
+        buildPhase: resources
+        type: folder
+    dependencies:
+      - target: DeviceHubLive
+        embed: false
+      - target: DeviceHubPrivateMedia
+        embed: false
+      - framework: .build/devicehub/Rust/Artifacts/DeviceHubFFI.xcframework
+        embed: false
+      - package: PlaylistMoveCore
+      - package: CellUse
+      - package: CellUseNative
+        product: CellUseRuntime
+      - package: CellUseNative
+        product: PhoneProbeCore
+      - package: DeviceHubKit
+        product: DeviceHubMedia
+      - package: DeviceHubKit
+        product: DeviceHubCore
+      - package: DeviceHubKit
+        product: DeviceHubClient
+      - package: DeviceHubKit
+        product: DeviceHubDiagnostics
+      - package: DeviceHubKit
+        product: DeviceHubPersistence
+      - package: DeviceHubKit
+        product: DeviceHubTransport
+    settings:
+      base:
+        INFOPLIST_FILE: Examples/PlaylistMove/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.raynan.playlistmove
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
 schemes:
   CellUseDemo:
     build:
       targets:
         CellUseDemo: all
+  PlaylistMove:
+    build:
+      targets:
+        PlaylistMove: all

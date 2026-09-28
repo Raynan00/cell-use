@@ -5,6 +5,7 @@ public enum PhoneInputEvent: Sendable, Equatable {
     case tap(x: Double, y: Double)
     case touch(x: Double, y: Double, phase: Phase)
     case character(Character)
+    case key(PhoneKey)
     case releaseAll
     public enum Phase: Sendable { case began, moved, ended }
 }
@@ -29,6 +30,7 @@ public enum PhoneInputEvent: Sendable, Equatable {
             try check()
             switch action {
             case let .tap(x, y): try await send(.tap(x: x, y: y))
+            case let .pressKey(key): try await send(.key(key))
             case let .swipe(x, y, endX, endY, duration):
                 try await send(.touch(x: x, y: y, phase: .began))
                 let steps = 12

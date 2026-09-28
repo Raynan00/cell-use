@@ -147,7 +147,7 @@ public struct PhoneActionRunner {
         let index = snapshot.observations.count - 1
         snapshot.observations[index].resolvedSeconds = now - startedAt
         switch decision.action {
-        case .tap, .swipe, .typeText:
+        case .tap, .swipe, .typeText, .pressKey:
             if let error = decision.action.inputValidationError { stop(error); return nil }
             guard snapshot.inputs.count < configuration.maximumInputs else { stop("inputLimit"); return nil }
             if case .tap = decision.action, snapshot.taps.count >= configuration.maximumTaps { stop("tapLimit"); return nil }

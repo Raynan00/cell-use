@@ -18,16 +18,19 @@ rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
 rustup target add --toolchain "$RUSTUP_TOOLCHAIN" aarch64-apple-ios aarch64-apple-ios-sim
 bash .build/devicehub/Scripts/build-protocol-xcframework.sh
 xcodegen generate --spec project.yml
-xcodebuild -resolvePackageDependencies -project CellUseDemo.xcodeproj -scheme CellUseDemo
+scheme="${1:-CellUseDemo}"
+case "$scheme" in CellUseDemo|PlaylistMove) ;; *) echo 'Unknown app scheme' >&2; exit 1 ;; esac
+xcodebuild -resolvePackageDependencies -project CellUseDemo.xcodeproj -scheme "$scheme"
 # This compiles the actual device target without importing any signing credentials.
-xcodebuild -project CellUseDemo.xcodeproj -scheme CellUseDemo \
+xcodebuild -project CellUseDemo.xcodeproj -scheme "$scheme" \
   -skipMacroValidation \
   -configuration Debug -destination 'generic/platform=iOS' \
   -derivedDataPath .build/DerivedData CODE_SIGNING_ALLOWED=NO build
 echo 'Unsigned device app: .build/DerivedData/Build/Products/Debug-iphoneos/CellUseDemo.app'
-python3 Scripts/package-unsigned.py
+python3 Scripts/package-unsigned.py "$scheme"
 echo 'For installation, open CellUseDemo.xcodeproj and select your signing team and connected iPhone.'
 # Run integration tests after packaging so a failed host-only diagnostic can be
 # investigated on the phone. Failure still fails this script and the CI job.
 swift test
 swift test --package-path Runtime
+swift test --package-path Examples/PlaylistMove
