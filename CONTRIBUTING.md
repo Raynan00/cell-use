@@ -9,6 +9,10 @@ Run `swift test` for the portable CellUse package. On Linux,
 `bash Scripts/build-macos.sh` bootstraps the transport, compiles the iPhone app
 and runs the core, routing, media and runtime integration tests.
 
+For the optional embedded connection, `swift test` includes the packet-routing
+suite. Run `bash Scripts/build-embedded-tunnel.sh` on Mac to compile and inspect
+the standalone host and its embedded extension, without bootstrapping DeviceHub.
+
 Keep perception/model policy separate from input transport. Preserve observation
 binding, cancellation and uncertain-delivery behavior. Never automatically retry
 an input whose delivery status is unknown. State whether a result is mocked,

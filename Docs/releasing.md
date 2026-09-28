@@ -19,3 +19,9 @@ Build metadata must distinguish app build number, package version, agent contrac
 version and native dependency revision. The pure Swift package source is covered
 by Apache-2.0; native dependencies keep their own licenses. GitHub automatically
 provides tagged source archives.
+
+For a package/template-only release, run the **Validate embedded tunnel** workflow
+when that component changes. It compiles the iOS host and extension and checks
+the embedded bundle. Publish the tagged sources and release notes without a new
+full-demo IPA when the phone runtime/demo is unchanged; keep its existing release
+link. An unsigned build check does not replace signed physical-device validation.

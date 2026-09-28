@@ -29,6 +29,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: cell-use tunnel host
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIRequiresFullScreen: YES
         CODE_SIGN_ENTITLEMENTS: ../../Templates/EmbeddedTunnel/Host.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
   CellUseTunnelExtension:
