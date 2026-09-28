@@ -6,7 +6,7 @@ Demo flow: choose a song-recommendation screenshot in Playlist Move, show its la
 
 > The best song recommendations are buried in the comments. I wanted them in a playlist.
 
-Show a real TikTok comment screenshot with three clear song-and-artist recommendations in Playlist Move's expanded preview. It appears as soon as the image is loaded, while the app reads it. Say:
+Show a real TikTok comment screenshot with three readable song recommendations in Playlist Move's expanded preview. It appears as soon as the image is loaded, while the app reads it. Artist names are optional; the agent can look them up in Spotify. Say:
 
 > I gave this app a screenshot. Now watch my phone.
 
@@ -18,7 +18,7 @@ Show the extracted songs below the preview and the destination name Comment Sect
 >
 > What would you build?
 
-Keep the screenshot visible long enough to read the recommendations. Crop unrelated comments and identifying details before recording. Use clear title-and-artist recommendations; the app stops for unclear input. Show the actual result from the recorded run.
+Keep the screenshot visible long enough to read the recommendations. Crop unrelated comments and identifying details before recording. Use readable song titles; the agent stops for clarification if Spotify results are ambiguous. Show the actual result from the recorded run.
 
 Caption the first automatic Spotify action **cell-use is controlling Spotify**. Keep Playlist Move's BUILT WITH CELL-USE header visible in the opening. Credit the local model as Apple Foundation Models in the technical caption or post.
 

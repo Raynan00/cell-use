@@ -17,11 +17,11 @@ The unsigned archive is `.build/playlist-move-unsigned.ipa`. The `Build Playlist
 ## Screenshot to Spotify
 
 1. Sign in to Spotify, enable Apple Intelligence and finish its model download. Keep Developer Mode and the local tunnel enabled. Pair and connect Playlist Move through Connection setup.
-2. Tap **Choose screenshot**. The image appears at full card width while the local model reads its recommendations. The preview stays expanded above the extracted song titles and artists.
+2. Tap **Choose screenshot**. The image appears at full card width while the local model reads its recommendations. The preview stays expanded above the extracted songs. Titles without artists are accepted and labeled **Find artist in Spotify**.
 3. Check the songs and enter a new Spotify playlist name. Tap **Create playlist**. Spotify opens automatically, and the agent searches for the songs and adds them through its interface.
 4. Keep the iPhone unlocked and in portrait. Return after the run to inspect the result and export its timeline.
 
-For the demo, use a screenshot with three clear song-and-artist recommendations. Hold on the preview long enough to read it, show the extracted songs, then film the automatic Spotify actions with your hands away.
+For the demo, use a screenshot with three readable song recommendations. When an artist is missing, the agent searches the title and reads the artist from Spotify before adding the song. If the result is ambiguous, it stops for clarification. Hold on the preview long enough to read it, show the extracted songs, then film the automatic Spotify actions with your hands away.
 
 ## Optional: hands-free from Photos
 
@@ -29,9 +29,9 @@ For the demo, use a screenshot with three clear song-and-artist recommendations.
 2. Create a shortcut named **Playlist this** in Apple's Shortcuts app. In its Details, enable **Receive What's On Screen**. Accept **Images** as input. Set **If there's no input** to **Stop and Respond**, with a message to open the screenshot in Photos.
 3. Add Playlist Move's **Create Spotify Playlist from Image** action. Set **Image** to **Shortcut Input** and **Playlist name** to **Comment Section**, or another new name.
 4. Run the shortcut once to grant any system access prompts before recording. It uses the supplied image, without searching your photo library for another image.
-5. Open a readable screenshot in Photos and say **Siri, playlist this**. Playlist Move opens, extracts up to five explicit title-and-artist recommendations, connects to the paired phone, and shows a three-second Cancel countdown. Spotify then opens and the agent creates the playlist.
+5. Open a readable screenshot in Photos and say **Siri, playlist this**. Playlist Move opens, extracts up to five song recommendations, connects to the paired phone, and shows a three-second Cancel countdown. Spotify then opens and the agent creates the playlist.
 
-If a recommendation needs clarification, the app displays the issue instead of starting. Use a screenshot with clear song titles and artists for the first run.
+If a title cannot be read, the app displays the issue instead of starting. Artist names can be supplied in the screenshot or resolved from Spotify results.
 
 The foreground handoff through Playlist Move starts its background work before Spotify opens. Pairing, the tunnel, and system permission prompts are one-time setup for the demo, rather than steps to hide during recording.
 

@@ -27,4 +27,42 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertThrowsError(try TransferLedger(recommendations: [], screenText: "nothing", destination: "Comments"))
         XCTAssertThrowsError(try TransferLedger(recommendations: [recommendation], screenText: recommendation.evidence, destination: " "))
     }
+
+    func testTitleOnlyRecommendationMustResolveArtistBeforeItCanBeAdded() throws {
+        let item = ScreenshotRecommendation(title: "Song One", artist: "", evidence: "try Song One")
+        var ledger = try TransferLedger(recommendations: [item], screenText: "try Song One", destination: "Comments")
+        XCTAssertEqual(ledger.currentSong?.artist, "")
+        XCTAssertThrowsError(try ledger.recordAttempt())
+        let song = Song(title: "Song One", artist: "Artist One")
+        let results = ["Song One", "Artist One"].enumerated().map {
+            ScreenText(id: $0.offset, text: $0.element, x: 0.5, y: 0.5)
+        }
+        XCTAssertThrowsError(try ledger.resolveCurrentSong(Song(title: "Song One", artist: "Guessed Artist"), screen: results))
+        XCTAssertThrowsError(try ledger.resolveCurrentSong(Song(title: "Song One (Live)", artist: "Artist One"), screen: results))
+        try ledger.resolveCurrentSong(song, screen: results)
+        XCTAssertEqual(ledger.currentSong, song)
+        try ledger.recordAttempt()
+        XCTAssertEqual(ledger.attempted, [song.id])
+        try ledger.verify(screen: results + [ScreenText(id: 2, text: "Comments", x: 0.5, y: 0.2)])
+        XCTAssertEqual(ledger.phase, .completed)
+    }
+
+    func testMissingArtistDoesNotMakeSongVisibleOrAllowInventedTitles() throws {
+        let item = ScreenshotRecommendation(title: "Imagined Song", artist: "", evidence: "Actual Song")
+        XCTAssertThrowsError(try item.validated(in: "Actual Song"))
+        XCTAssertFalse(Song(title: "Actual Song", artist: "").visible(in: [
+            ScreenText(id: 0, text: "Actual Song", x: 0.5, y: 0.5)
+        ]))
+    }
+
+    func testEvidenceUsesActualNumberedLinesIncludingWrappedComments() throws {
+        let lines = ["someone123", "Song One", "by Artist One", "12 likes"]
+        let item = try ScreenshotRecommendation(title: "Song One", artist: "Artist One", firstLine: 2, lastLine: 3, lines: lines)
+        XCTAssertEqual(try item.validated(in: lines.joined(separator: "\n")), Song(title: "Song One", artist: "Artist One"))
+        XCTAssertThrowsError(try ScreenshotRecommendation(title: "Song One", artist: "", firstLine: 0, lastLine: 3, lines: lines))
+        XCTAssertThrowsError(try ScreenshotRecommendation(title: "Song One", artist: "", firstLine: 3, lastLine: 2, lines: lines))
+        XCTAssertThrowsError(try ScreenshotRecommendation(title: "Song One", artist: "", firstLine: 2, lastLine: 10, lines: lines))
+        let unrelated = try ScreenshotRecommendation(title: "Song One", artist: "", firstLine: 4, lastLine: 4, lines: lines)
+        XCTAssertThrowsError(try unrelated.validated(in: lines.joined(separator: "\n")))
+    }
 }

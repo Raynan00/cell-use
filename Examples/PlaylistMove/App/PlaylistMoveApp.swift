@@ -223,7 +223,7 @@ struct PlaylistMoveView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "text.below.photo").font(.system(size: 40, weight: .light))
                     Text("Your next playlist is in the comments.").font(.headline)
-                    Text("Choose a screenshot with song titles and artists.")
+                    Text("Choose a screenshot with song recommendations.")
                         .font(.callout).foregroundStyle(.secondary)
                 }.multilineTextAlignment(.center).padding(.vertical, 32)
                     .frame(maxWidth: .infinity)
@@ -247,7 +247,7 @@ struct PlaylistMoveView: View {
             ForEach(model.screenshotSongs) { song in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(song.title).font(.subheadline.bold())
-                    Text(song.artist).font(.caption).foregroundStyle(.secondary)
+                    Text(song.artist.isEmpty ? "Find artist in Spotify" : song.artist).font(.caption).foregroundStyle(.secondary)
                 }
             }
             Divider()

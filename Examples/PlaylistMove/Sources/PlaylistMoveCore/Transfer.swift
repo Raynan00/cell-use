@@ -21,14 +21,29 @@ public struct Song: Codable, Sendable, Equatable, Identifiable {
             .split(whereSeparator: { !$0.isLetter && !$0.isNumber }).joined(separator: " ")
     }
     public func visible(in elements: [ScreenText]) -> Bool {
+        guard !Self.normalized(artist).isEmpty else { return false }
         let words = elements.map { Self.normalized($0.text) }
         return words.contains(Self.normalized(title)) && words.contains { $0.contains(Self.normalized(artist)) }
     }
 }
 
-public enum TransferError: String, Error, Sendable {
+public enum TransferError: String, LocalizedError, Sendable {
     case invalidConfiguration, invalidAction, unknownElement, sourceNotVisible
     case songNotVisible, nothingToMove, duplicateSong, incompleteVerification, unsafeControl
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidConfiguration: "Check the playlist name and song count. Use a playlist name of 1 to 32 English keyboard characters."
+        case .invalidAction: "That action is not ready yet. Check the current phone screen."
+        case .unknownElement: "The screen changed before that control could be found."
+        case .sourceNotVisible: "The requested source playlist is not visible yet."
+        case .songNotVisible: "A song could not be matched to the visible text. Check its title and artist."
+        case .nothingToMove: "No song titles were found to move."
+        case .duplicateSong: "That song is already in the list."
+        case .incompleteVerification: "The destination playlist still needs to be checked."
+        case .unsafeControl: "That control is outside this playlist task."
+        }
+    }
 }
 
 public struct TransferLedger: Codable, Sendable {
@@ -68,6 +83,16 @@ public struct TransferLedger: Codable, Sendable {
 
     public var currentSong: Song? { songs.first { !attempted.contains($0.id) } }
 
+    public mutating func resolveCurrentSong(_ candidate: Song, screen: [ScreenText]) throws {
+        guard service == .spotify, phase == .moving, let current = currentSong,
+              current.artist.isEmpty, Song.normalized(candidate.title) == Song.normalized(current.title),
+              candidate.visible(in: screen), let index = songs.firstIndex(where: { $0.id == current.id }) else {
+            throw TransferError.songNotVisible
+        }
+        guard !songs.contains(where: { $0.id == candidate.id }) else { throw TransferError.duplicateSong }
+        songs[index] = candidate
+    }
+
     public mutating func capture(_ candidates: [Song], screen: [ScreenText]) throws {
         guard phase == .reading,
               screen.contains(where: { Song.normalized($0.text) == Song.normalized(source) }) else {
@@ -88,7 +113,7 @@ public struct TransferLedger: Codable, Sendable {
     }
 
     public mutating func recordAttempt() throws {
-        guard phase == .moving, let song = currentSong else { throw TransferError.invalidAction }
+        guard phase == .moving, let song = currentSong, !song.artist.isEmpty else { throw TransferError.invalidAction }
         attempted.append(song.id)
         if attempted.count == songs.count { phase = .verifying }
     }
@@ -114,6 +139,12 @@ public struct ScreenshotRecommendation: Sendable {
     public init(title: String, artist: String, evidence: String) {
         self.title = title; self.artist = artist; self.evidence = evidence
     }
+    public init(title: String, artist: String, firstLine: Int, lastLine: Int, lines: [String]) throws {
+        guard firstLine >= 1, lastLine >= firstLine, lastLine <= lines.count else {
+            throw TransferError.songNotVisible
+        }
+        self.init(title: title, artist: artist, evidence: lines[(firstLine - 1)..<lastLine].joined(separator: "\n"))
+    }
     public func validated(in screenText: String) throws -> Song {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let artist = artist.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -122,9 +153,10 @@ public struct ScreenshotRecommendation: Sendable {
         func containsWords(_ haystack: String, _ needle: String) -> Bool {
             (" " + haystack + " ").contains(" " + needle + " ")
         }
-        guard !songTitle.isEmpty, !songArtist.isEmpty, !proof.isEmpty,
+        guard !songTitle.isEmpty, !proof.isEmpty,
               containsWords(Song.normalized(screenText), proof),
-              containsWords(proof, songTitle), containsWords(proof, songArtist) else { throw TransferError.songNotVisible }
+              containsWords(proof, songTitle),
+              (artist.isEmpty || (!songArtist.isEmpty && containsWords(proof, songArtist))) else { throw TransferError.songNotVisible }
         return Song(title: title, artist: artist)
     }
 }
