@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Optional `CellUseTunnel` SwiftPM product with an embedded packet-tunnel provider
+  and host connection controller.
+- App-extension template, signing entitlements and standalone iOS host example
+  for developers bundling the connection inside their own apps.
+- IPv4 route validation, packet checksum/payload tests and unsigned iOS
+  app/extension build checks.
+
 ## 0.1.0-alpha.1
 
 Initial developer preview, derived from Phone Probe build 20.

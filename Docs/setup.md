@@ -1,5 +1,10 @@
 # Set up the iPhone demo
 
+This page covers the released demo with an external tunnel and free-account
+signing. For your own app, use [the embedded tunnel](embedded-tunnel.md) to bundle
+the connection in your app's installation. Its host and extension require an
+Apple Developer Program signing team.
+
 ## Requirements
 
 - The current native demo targets iOS 27.0 and a physical iPhone. The demo is built with Xcode 27.

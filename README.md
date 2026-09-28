@@ -15,10 +15,16 @@ pairing, developer-service preparation and a local VPN.
 | --- | --- | --- |
 | **CellUse** | Agent protocol, actions, ordered runner and diagnostics | SwiftPM URL + version |
 | **CellUseRuntime** | iPhone screenshot and input adapter | Clone and build with native dependencies |
+| **CellUseTunnel** | Embedded local connection for your own app | SwiftPM product + packet-tunnel extension target |
 | **cell-use demo** | Reference app for pairing, background tasks and device experiments | Sign the release IPA, or build with Xcode |
 
 Use the portable SDK to implement your agent, and the native runtime to connect
 it to an iPhone. The reference app supplies the session and background-task setup.
+
+Building your own app? [Embed the tunnel](Docs/embedded-tunnel.md) to ship the
+connection inside your app, with no separate LocalDevVPN installation. The
+publishing developer signs the app and extension; users need no paid developer
+account. This component is available on `main` ahead of its first versioned release.
 
 ## Install the agent SDK
 

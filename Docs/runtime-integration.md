@@ -4,6 +4,10 @@
 them to an authenticated iPhone session. The reference app shows how to provide
 pairing, local VPN routing and background-task lifecycle management.
 
+For a single-app installation, use [CellUseTunnel](embedded-tunnel.md) and the
+supplied extension template. Start the embedded tunnel before native discovery
+and connection, and use its configured device address as your local VPN peer.
+
 ## Packaging
 
 The root Swift package provides `CellUse`, the portable agent API and runner.
@@ -18,7 +22,7 @@ required DeviceHubLive, private-media and native-framework targets. Use this sou
 
 ## Host ownership
 
-The host creates and owns the authenticated DeviceSession, LocalDevVPN route,
+The host creates and owns the authenticated DeviceSession, local tunnel route,
 pairing records, developer-service preparation, discovery, event/frame streams,
 and OS background task. The runtime takes a session and an agent; it does not
 create a connection, claim background time or bypass signing requirements.
