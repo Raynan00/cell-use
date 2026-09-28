@@ -47,7 +47,7 @@ public struct CalculatorScreen: Sendable {
             guard abs(key.x - (keys[0].x + Double(i % 3) * dx)) < 0.035,
                   abs(key.y - (keys[0].y + Double(i / 3) * dy)) < 0.025 else { return Inspection(screen: nil, reason: "gridGeometryMismatch") }
         }
-        // Require the bottom zero key as well as the complete 1–9 grid.
+        // Require the bottom zero key as well as the complete 1-9 grid.
         guard text.contains(where: { $0.text == "0" && $0.y > keys[6].y + 0.035 &&
             $0.y < 0.98 && $0.x < 0.60 }) else { return Inspection(screen: nil, reason: "bottomZeroMissing") }
         let displays = text.filter { token in

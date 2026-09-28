@@ -15,7 +15,7 @@ The first version is `0.1.0-alpha.1`; prerelease APIs may change.
    State the source revision, CI run and package changes.
 6. Resolve and build an external SwiftPM consumer against the public tag.
 
-Build metadata must distinguish app build number, package version, agent contract
+Build metadata must distinguish app build number, package version, agent API
 version and native dependency revision. The pure Swift package source is covered
 by Apache-2.0; native dependencies keep their own licenses. GitHub automatically
 provides tagged source archives.

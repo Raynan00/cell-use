@@ -1,4 +1,4 @@
-# Demo the harness
+# iPhone automation demos
 
 Complete [setup](setup.md) first. Use empty test content, keep portrait rotation
 locked, disconnect USB and keep the phone unlocked. The included scripted agents demonstrate observation, action delivery and
@@ -44,5 +44,5 @@ or the system cancels it. The reference job captures 60 frames and reports progr
 Record the physical phone with a second camera so viewers can see hands off the
 screen and the disconnected cable. Show setup requirements, start a run, show the
 target app changing, then show the completed report. Label the client **scripted**
-and describe cell-use as the execution harness. Keep account details and private
+and describe cell-use as the library handling phone control. Keep account details and private
 content out of the shot.

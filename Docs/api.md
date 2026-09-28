@@ -1,10 +1,12 @@
-# CellUse
+# CellUse Swift API reference
 
-A standalone Swift 6 package for coordinating screenshot-driven phone actions.
-It has no model, networking, UIKit, DeviceHub or external package dependencies.
-`PhoneAgent` chooses actions; `PhoneActionRunner` owns sequencing and evidence;
-a platform adapter captures images and delivers commands. The separate `Runtime` package exports `CellUseRuntime`, the Apple adapter used by the demo. See [runtime integration](runtime-integration.md).
-The coordinator alone does not control a phone.
+`CellUse` is the Swift 6 agent API and execution loop. `PhoneAgent` chooses
+actions, and `PhoneActionRunner` keeps them in order and records command results.
+Use `CellUseRuntime` from the separate `Runtime` package for iPhone screenshots
+and input. See [runtime integration](runtime-integration.md).
+
+The agent API has no external package dependencies. Your app supplies the model
+and the connection to the phone.
 
 ## Provider interface
 
@@ -38,13 +40,12 @@ Supported actions:
   layout and an already focused editable field. No Unicode, paste or implicit Return.
 - `.wait(seconds:)`: a finite interval from 0.1 through 5 seconds, followed by
   a new observation before the next decision.
-- `.finish`: end the run. This is the provider's completion request, not an
-  assertion that the user's task was semantically achieved.
+- `.finish`: end the run. Your provider decides whether the task is complete.
 
 The decision includes version 1 and echoes the exact run ID and observation ID.
 All request/response types are Codable and Sendable. Data uses Foundation's
-base64 JSON representation. This is a versioned data contract and in-process
-protocol; no HTTP/MCP server or external model provider is installed by this SDK.
+base64 JSON representation. The Swift protocol runs inside your app. Your provider
+handles any connections to a model or external service.
 
 A deterministic client is included:
 
@@ -60,7 +61,7 @@ let agent = ScriptedPhoneAgent(actions: [
 Each decision is requested from a new screenshot. The scripted client indexes
 this list with decisionIndex and does not interpret image contents.
 
-## Platform adapter obligations
+## Connecting a platform adapter
 
 1. Construct a coordinator for one run, then call start with monotonic time.
 2. Feed session-scoped metadata via offer. Only encode and send an observation

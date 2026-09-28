@@ -1,6 +1,6 @@
 # iPhone runtime integration
 
-`CellUse` provides the agent contract and coordinator. `CellUseRuntime` connects
+`CellUse` provides the agent API and execution loop. `CellUseRuntime` connects
 them to an authenticated iPhone session. The reference app shows how to provide
 pairing, local VPN routing and background-task lifecycle management.
 
@@ -20,7 +20,7 @@ For your own iOS host, add the `Runtime` directory as a local Swift package and
 select its `CellUseRuntime` product. The reference `project.yml` also shows the
 required DeviceHubLive, private-media and native-framework targets. Use this source build for native iPhone control.
 
-## Host ownership
+## What your app manages
 
 The host creates and owns the authenticated DeviceSession, local tunnel route,
 pairing records, developer-service preparation, discovery, event/frame streams,
@@ -53,10 +53,10 @@ Callbacks should capture their host weakly. For extended processing, the host
 must separately register/start its OS task and report real completed work. The
 working probe demonstrates 60-image plus four-decision progress accounting.
 
-## Input contract
+## Input behavior
 
-Tap, swipe and text use the same single-use observation binding, fresh portrait
-frame gates, action budget, watchdog and terminal uncertain-delivery behavior.
+Tap, swipe and text each use a decision tied to a fresh portrait screenshot.
+The runner checks input limits and timeouts, and stops when delivery is uncertain.
 Swipe accepts normalized endpoints and 0.2...1-second duration. Text accepts
 1...32 printable US-ASCII characters, with no Return, using the US HID layout.
 The host/user must focus the intended text field and keep portrait orientation
