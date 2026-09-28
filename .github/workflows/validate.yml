@@ -29,6 +29,7 @@ jobs:
       - run: swift test
       - run: swift test --package-path Runtime
       - run: python3 Scripts/test-bootstrap.py
+      - run: python3 Scripts/test-background-identifier.py
   ios-build:
     # Compile on GitHub's documented Xcode 27 preview image; no signing secrets.
     # Deliberately opt-in because macOS minutes may count against the account.

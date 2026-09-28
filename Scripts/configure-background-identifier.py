@@ -21,12 +21,22 @@ assert args.input.resolve() != args.output.resolve(), "Preserve the CI artifact"
 assert not args.output.exists(), "Refusing to overwrite an existing artifact"
 bundle = args.bundle_id_file.read_text().strip()
 assert re.fullmatch(r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+", bundle), "Invalid bundle ID"
-entry = "Payload/CellUseDemo.app/Info.plist"
 with zipfile.ZipFile(args.input) as source:
     assert source.testzip() is None
     assert not any("_CodeSignature/" in name or name.endswith("embedded.mobileprovision") for name in source.namelist()), "Use the unsigned CI artifact"
+    entries = [name for name in source.namelist()
+               if re.fullmatch(r"Payload/[^/]+\.app/Info\.plist", name)]
+    assert len(entries) == 1, "Expected exactly one host app in the IPA"
+    entry = entries[0]
     info = plistlib.loads(source.read(entry))
-    info["BGTaskSchedulerPermittedIdentifiers"] = [bundle + ".probe.*"]
+    original_bundle = info.get("CFBundleIdentifier", "")
+    assert original_bundle, "Missing original bundle identifier"
+    allowed = info.get("BGTaskSchedulerPermittedIdentifiers", [])
+    assert isinstance(allowed, list) and allowed, "Missing background task identifiers"
+    assert all(isinstance(value, str) and value.startswith(original_bundle + ".")
+               for value in allowed), "Background task identifiers must use the original bundle prefix"
+    expected = [bundle + value[len(original_bundle):] for value in allowed]
+    info["BGTaskSchedulerPermittedIdentifiers"] = expected
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(args.output, "w") as target:
         for item in source.infolist():
@@ -36,7 +46,7 @@ with zipfile.ZipFile(args.input) as source, zipfile.ZipFile(args.output) as targ
     changed = [name for name in source.namelist() if source.read(name) != target.read(name)]
     assert changed == [entry], "Unexpected artifact changes"
     configured = plistlib.loads(target.read(entry))
-    assert configured["BGTaskSchedulerPermittedIdentifiers"] == [bundle + ".probe.*"]
+    assert configured["BGTaskSchedulerPermittedIdentifiers"] == expected
 print(json.dumps({"file": str(args.output.resolve()), "changedEntries": changed,
                   "sha256": hashlib.sha256(args.output.read_bytes()).hexdigest(),
                   "configuredForObservedInstalledBundle": True}, indent=2))

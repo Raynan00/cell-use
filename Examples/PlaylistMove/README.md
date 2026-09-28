@@ -14,6 +14,14 @@ bash Scripts/build-macos.sh PlaylistMove
 
 The unsigned archive is `.build/playlist-move-unsigned.ipa`. The `Build Playlist Move` GitHub workflow produces the same archive. Sign it for your iPhone before installation.
 
+If Sideloadly changes the app's bundle identifier, configure the background task identifier for that final signed ID before signing the archive again. Save the installed app's bundle ID in a local text file, then run:
+
+```sh
+python3 Scripts/configure-background-identifier.py --input .build/playlist-move-unsigned.ipa --output .build/playlist-move-configured.ipa --bundle-id-file .build/installed-playlist-bundle.txt
+```
+
+Sign the configured IPA with the same account and bundle settings. The helper preserves the executable and original bundle ID, and updates the background task entries. Keep the bundle ID file and configured IPA local.
+
 ## Screenshot to Spotify
 
 1. Sign in to Spotify, enable Apple Intelligence and finish its model download. Keep Developer Mode and the local tunnel enabled. Pair and connect Playlist Move through Connection setup.
