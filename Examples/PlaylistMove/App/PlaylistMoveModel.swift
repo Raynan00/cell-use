@@ -19,6 +19,7 @@ final class PlaylistMoveModel {
     var source = "Late Night"
     var destination = "Late Night Move"
     var trackLimit = 1
+    var playlistLink = ""
     var peer = "10.7.0.1"
     private(set) var devices: [DeviceSummary] = []
     private(set) var message = "Preparing the connection"
@@ -158,6 +159,11 @@ final class PlaylistMoveModel {
     func arm() {
         guard canRun, let session else { return }
         do {
+            let launchURL = try SpotifyLaunch.url(playlistLink: playlistLink)
+            guard UIApplication.shared.canOpenURL(launchURL) else {
+                message = "Install Spotify and sign in before starting a transfer."
+                return
+            }
             let ledger = try TransferLedger(source: source, destination: destination, limit: trackLimit)
             let provider = LocalPlaylistAgent(ledger: ledger)
             let id = session.id.rawValue
@@ -181,8 +187,17 @@ final class PlaylistMoveModel {
             work.submit(start: { [weak self] in
                 guard let self else { return }
                 self.armed = true
-                self.message = "Ready. Switch to your Spotify playlist. The transfer begins after four seconds."
+                self.message = "Opening Spotify. The transfer begins after four seconds."
+                UIApplication.shared.open(launchURL, options: [:]) { [weak self] opened in
+                    Task { @MainActor in
+                        guard let self, self.runtime?.snapshot.runID == id,
+                              self.armed || self.running else { return }
+                        if !opened { self.stop(reason: "Couldn't open Spotify. Check that it is installed, then reconnect.") }
+                    }
+                }
             }, expire: { [weak self] reason in self?.stop(reason: reason) })
+        } catch RequestError.invalidPlaylistLink {
+            message = "Use a full open.spotify.com/playlist/ link, or leave the link empty."
         } catch { message = "Check playlist names. Destination must be 1 to 32 English keyboard characters." }
     }
 

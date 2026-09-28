@@ -8,6 +8,7 @@ struct PlaylistMoveApp: App {
 
 struct PlaylistMoveView: View {
     @State private var model = PlaylistMoveModel()
+    @State private var voice = VoiceRequest()
     @State private var showSetup = true
     @State private var showRecording = false
     @Environment(\.scenePhase) private var scenePhase
@@ -35,6 +36,20 @@ struct PlaylistMoveView: View {
                     Image(systemName: "arrow.right").font(.headline).foregroundStyle(accent)
                     service("Apple Music", caption: "TO", symbol: "music.note", color: .pink)
                 }
+                VStack(alignment: .leading, spacing: 12) {
+                    Button {
+                        if voice.recording { voice.finishRecording() } else { voice.start() }
+                    } label: {
+                        Label(voice.recording ? "Use recording" : "Say your request",
+                              systemImage: voice.recording ? "stop.circle.fill" : "mic.fill")
+                            .font(.headline)
+                    }.disabled(model.busy || voice.working)
+                    if voice.working { ProgressView().controlSize(.small) }
+                    Text(voice.message).font(.caption).foregroundStyle(.secondary)
+                    if !voice.transcript.isEmpty { Text(voice.transcript).font(.callout) }
+                    if voice.busy { Button("Cancel voice input") { voice.cancel() }.font(.caption) }
+                }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 22))
                 VStack(alignment: .leading, spacing: 15) {
                     field("SPOTIFY PLAYLIST", text: $model.source)
                     Divider()
@@ -43,9 +58,16 @@ struct PlaylistMoveView: View {
                         Text("One song").tag(1)
                         Text("Five songs").tag(5)
                     }.pickerStyle(.segmented)
+                    DisclosureGroup("Open a specific Spotify playlist") {
+                        TextField("Paste playlist link (optional)", text: $model.playlistLink)
+                            .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .padding(.top, 8)
+                        Text("Use Share → Copy link in Spotify. This link opens the playlist; the agent reads the songs from its screen.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }.font(.callout)
                 }
                 .padding(20).background(.white, in: RoundedRectangle(cornerRadius: 22))
-                .disabled(model.busy)
+                .disabled(model.busy || voice.busy)
 
                 if let issue = model.modelIssue {
                     Label(issue, systemImage: "sparkles").font(.callout)
@@ -62,11 +84,11 @@ struct PlaylistMoveView: View {
                         HStack { Text("Move my playlist"); Spacer(); Image(systemName: "arrow.up.right") }
                             .font(.headline).padding(18)
                             .foregroundStyle(.white).background(accent, in: RoundedRectangle(cornerRadius: 16))
-                    }.disabled(!model.canRun).opacity(model.canRun ? 1 : 0.45)
+                    }.disabled(!model.canRun || voice.busy).opacity(model.canRun && !voice.busy ? 1 : 0.45)
                     if model.busy || model.connected {
                         Button("Stop and disconnect", role: .destructive) { model.stop() }.font(.callout)
                     }
-                    Text("Open the Spotify playlist first. Start here, then switch back to Spotify. Keep the phone unlocked and in portrait.")
+                    Text("Spotify opens when you start. Keep the phone unlocked and in portrait while the playlist moves.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
 
@@ -119,7 +141,7 @@ struct PlaylistMoveView: View {
                             }.disabled(model.busy || model.connected || device.reachability != .reachable)
                         }
                     }.font(.callout).padding(.top, 10)
-                }.font(.subheadline)
+                }.font(.subheadline).disabled(voice.busy)
                 HStack {
                     Text("BUILT WITH CELL-USE").tracking(1.5)
                     Spacer()
@@ -129,9 +151,19 @@ struct PlaylistMoveView: View {
         }
         .background(Color(red: 0.96, green: 0.96, blue: 0.92))
         .foregroundStyle(ink).tint(accent).preferredColorScheme(.light)
-        .task { await model.prepare() }
+        .task {
+            voice.onRequest = { request in
+                guard !model.busy else { return }
+                if model.source != request.source { model.playlistLink = "" }
+                model.source = request.source; model.destination = request.destination; model.trackLimit = request.count
+            }
+            await model.prepare()
+        }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background { model.sceneChanged(background: true) }
+            if phase == .background {
+                if voice.busy { voice.cancel() }
+                model.sceneChanged(background: true)
+            }
             else if phase == .active { model.sceneChanged(background: false) }
         }
         .onChange(of: model.connected) { _, connected in if connected { showSetup = false } }
@@ -156,8 +188,8 @@ struct PlaylistMoveView: View {
         NavigationStack {
             List {
                 Section("Capture") {
-                    Text("Use a second camera to film the whole iPhone, with your hands in view when you start and away from it during the transfer.")
-                    Text("Try iPhone Screen Recording for a cleaner second angle. Start it before the transfer. First check that screenshots and input still work with recording enabled.")
+                    Text("Use iPhone Screen Recording for the whole demo. Start recording before speaking your request, then tap Move and let Spotify open.")
+                    Text("Try a short take first to check microphone audio alongside voice input. You can add narration afterward if needed.")
                     Text("Keep music playback off. The playlist transfer works without playing the tracks.")
                 }
                 Section("Edit") {
