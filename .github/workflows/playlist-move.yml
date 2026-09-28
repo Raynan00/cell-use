@@ -27,7 +27,18 @@ jobs:
             sh /tmp/rustup-init.sh -y --profile minimal --no-modify-path
           fi
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - run: python3 Scripts/bootstrap.py
+      - uses: actions/cache/restore@v4
+        id: native-cache
+        with:
+          path: .build/devicehub/Rust/.build/cargo
+          key: playlist-native-xcode27-${{ hashFiles('dependencies.json') }}
       - run: bash Scripts/build-macos.sh PlaylistMove
+      - uses: actions/cache/save@v4
+        if: always() && !cancelled() && steps.native-cache.outputs.cache-hit != 'true'
+        with:
+          path: .build/devicehub/Rust/.build/cargo
+          key: playlist-native-xcode27-${{ hashFiles('dependencies.json') }}
       - uses: actions/upload-artifact@v4
         if: always() && !cancelled()
         with:

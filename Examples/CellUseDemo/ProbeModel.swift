@@ -718,7 +718,7 @@ final class ProbeModel {
             let build = "20"
             let runtime = "device-hub-ios@1fcdfb0a6799b62f05625d0cbb359bec57256b94+probe-png-input-v2"
             let observationMode = "pngWithTapInput"
-            let screenshotWindowSeconds = 120
+            let screenshotWindowSeconds = 900
             let extendedRun: Bool
             let continuedWork: ContinuedWork.Snapshot
             let calculator: CalculatorEvidence

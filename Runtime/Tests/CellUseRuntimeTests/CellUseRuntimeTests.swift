@@ -35,6 +35,26 @@ private func configuration() -> PhoneActionRunner.Configuration {
     return config
 }
 
+@Test(arguments: [PhoneKey.enter, .backspace, .selectAll])
+@MainActor func runtimeMapsKeyboardCommandsWithoutTypingTheirNames(key: PhoneKey) async throws {
+    let commands = Commands()
+    let target = session(commands)
+    let runtime = CellUseRuntime(runID: UUID(), session: target,
+        agent: ScriptedPhoneAgent(actions: [.pressKey(key), .finish]), configuration: configuration())
+    runtime.start(at: ProcessInfo.processInfo.systemUptime - 0.01)
+    runtime.receive(try frame(target.id.rawValue), inputReady: true)
+    for _ in 0..<100 where runtime.snapshot.acceptedInputCount == 0 { try await Task.sleep(for: .milliseconds(5)) }
+    let expected: DeviceCommand = switch key {
+    case .enter: .keyTap(.return, modifiers: [])
+    case .backspace: .keyTap(.delete, modifiers: [])
+    case .selectAll: .keyTap(.character("a"), modifiers: [.command])
+    }
+    let delivered = await commands.values
+    #expect(delivered == [expected])
+    runtime.cancel("testEnded", notify: false)
+    await target.disconnect()
+}
+
 @Test @MainActor func runtimeRejectsForeignSessionFramesThenDeliversFromOwnedSession() async throws {
     let commands = Commands(), native = session(Commands())
     // Use one observable transport for the test runtime.

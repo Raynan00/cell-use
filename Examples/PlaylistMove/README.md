@@ -22,7 +22,7 @@ The unsigned archive is `.build/playlist-move-unsigned.ipa`. The `Build Playlist
 4. Tap **Move my playlist**, wait for **Ready**, then switch back to Spotify. Leave the screen unlocked. The app reads the playlist, navigates to Music, and works through the transfer.
 5. Return to Playlist Move to inspect the result and export its timeline. Returning during a run stops further input. Use a new destination name for a fresh run.
 
-The first device run should use one song. The transfer has a ten-minute time budget and bounded action counts. It stops for an uncertain match or an unsupported interaction. A stopped transfer can leave a partly created destination playlist; inspect it before starting again.
+Start with one song. If you stop a run, inspect the destination playlist before starting another.
 
 ## Recording
 

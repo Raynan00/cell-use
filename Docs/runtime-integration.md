@@ -73,6 +73,6 @@ record kinds, IDs, counts and timings, never those payloads. Hosts/providers own
 their retention and network policies. The supplied scripted client makes no
 network/model calls.
 
-The native capture session uses portrait screenshots and a 120-second session
+The native capture session uses portrait screenshots and a 900-second session
 budget. Configure the runner to fit the host's granted background execution
 window, and handle cancellation through the lifecycle callbacks above.
