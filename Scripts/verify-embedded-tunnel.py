@@ -20,4 +20,3 @@ for bundle, metadata in [(args.app, host), (extension, info)]:
     executable = (bundle / metadata['CFBundleExecutable']).read_bytes()
     assert struct.unpack_from('<II', executable) == (0xFEEDFACF, 0x0100000C), 'Expected arm64 Mach-O'
 print('Verified arm64 host + embedded packet-tunnel extension, bundle IDs and principal class.')
-print('Unsigned build verification; provisioning and on-device tunnel startup require device testing.')

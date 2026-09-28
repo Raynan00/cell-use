@@ -24,4 +24,4 @@ For a package/template-only release, run the **Validate embedded tunnel** workfl
 when that component changes. It compiles the iOS host and extension and checks
 the embedded bundle. Publish the tagged sources and release notes without a new
 full-demo IPA when the phone runtime/demo is unchanged; keep its existing release
-link. An unsigned build check does not replace signed physical-device validation.
+link.
