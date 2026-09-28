@@ -24,16 +24,16 @@ it to an iPhone. The reference app supplies the session and background-task setu
 Building your own app? [Embed the tunnel](Docs/embedded-tunnel.md) to ship the
 connection inside your app, with no separate LocalDevVPN installation. The
 publishing developer signs the app and extension; users need no paid developer
-account. This component is available on `main` ahead of its first versioned release.
+account. See the host example for app/extension packaging and signing.
 
 ## Install the agent SDK
 
 Add `https://github.com/Raynan00/cell-use` in Xcode's package dependencies, selecting
-the exact version `0.1.0-alpha.1` and the **CellUse** product. Or use SwiftPM:
+the exact version `0.1.0-alpha.2` and the **CellUse** product. Or use SwiftPM:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Raynan00/cell-use.git", exact: "0.1.0-alpha.1")
+    .package(url: "https://github.com/Raynan00/cell-use.git", exact: "0.1.0-alpha.2")
 ]
 // In your target's dependencies:
 // .product(name: "CellUse", package: "cell-use")

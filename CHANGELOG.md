@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.2
 
 - Optional `CellUseTunnel` SwiftPM product with an embedded packet-tunnel provider
   and host connection controller.

@@ -6,9 +6,8 @@ extension is bundled inside your app; users do not install LocalDevVPN.
 
 ## Add the package and extension
 
-Use the `CellUseTunnel` product from this repository's `main` branch while this
-component is awaiting its first versioned release. Add it to both your iOS app
-and a **Network Extension / Packet Tunnel** target. The tunnel component targets
+Add this repository at version `0.1.0-alpha.2` and select the `CellUseTunnel`
+product for both your iOS app and a **Network Extension / Packet Tunnel** target. The tunnel component targets
 iOS 17+; the current phone-control runtime targets iOS 27.
 
 1. Give the extension an identifier below your app's identifier, for example
@@ -54,7 +53,7 @@ tunnel.disconnect()
 iOS asks the user to approve the VPN configuration. `connect()` reloads the saved
 profile, starts its provider, and waits up to 15 seconds for the connected state
 after profile setup. It touches only the matching provider's profile. Use one
-controller for that identifier and observe its `status` when updating your UI.
+controller for that identifier and read its `status` when updating your UI.
 Concurrent `connect()` calls on the same controller are rejected.
 
 Tunnel readiness and developer-service readiness are separate: after connection,
