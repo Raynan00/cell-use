@@ -74,3 +74,5 @@ swift test --package-path Examples/PlaylistMove
 ```
 
 `PlaylistMoveCore` contains the inventory, verification rules and grounded actions. `LocalPlaylistAgent` implements `PhoneAgent`; another local model can replace it without changing the transport. The example uses text elements from Vision, rather than sending screenshots to a vision-language model.
+
+Each observation supplies a fresh action menu. Tap and hold choices carry their visible target labels, so the model selects an action and target together. The report records that choice and label alongside its observation ID.

@@ -35,7 +35,7 @@ public enum TransferError: String, LocalizedError, Sendable {
         switch self {
         case .invalidConfiguration: "Check the playlist name and song count. Use a playlist name of 1 to 32 English keyboard characters."
         case .invalidAction: "That action is not ready yet. Check the current phone screen."
-        case .unknownElement: "The screen changed before that control could be found."
+        case .unknownElement: "The selected control is not present in this observation."
         case .sourceNotVisible: "The requested source playlist is not visible yet."
         case .songNotVisible: "A song could not be matched to the visible text. Check its title and artist."
         case .nothingToMove: "No song titles were found to move."
