@@ -1,0 +1,52 @@
+{
+  "deviceHub": {
+    "repository": "https://github.com/JaviSoto/device-hub-ios.git",
+    "revision": "1fcdfb0a6799b62f05625d0cbb359bec57256b94",
+    "probePatch": {
+      "path": "Patches/devicehub-media-diagnostics.patch",
+      "sha256": "be450f05af57a786b964ef5926b142797dba8a117902b3996564cb5b7df750fb",
+      "files": {
+        "Packages/DeviceHubKit/Sources/DeviceHubMedia/DeviceHubMedia.swift": {
+          "before": "af3f4f88be05ee72d52458fc3462a8b25dfd83205248576695743bc23dcf3ccc",
+          "after": "00e101a2f81cef7971c44cd85110d59db1b04fdca398ef95b23fbdc9bed4a58e"
+        },
+        "Packages/DeviceHubKit/Sources/DeviceHubTransport/RemoteSessionMediaOperation.swift": {
+          "before": "210f4a8f1cee513ca2f433b0cf9b6ff93d2225d8239d8151454c77493c8f9a58",
+          "after": "80b4e730dd71d5c379feb012cf4283c1d8693724ff73b251d58e297e5f72294a"
+        },
+        "Packages/DeviceHubKit/Sources/DeviceHubMedia/HEVCVideoDecoder.swift": {
+          "before": "6f0c32f8215a44a36a819c0acc17282f5c45e2483ad7cab8f56ef2e9dbe94942",
+          "after": "e7609d2ac56a003db5e9cca359e7e50f42fc2202ad3f71b061155bb69f9936c2"
+        },
+        "Rust/DeviceHubFFI/include/device_hub_ffi.h": {
+          "before": "52a2f0704ac2dcc60cf7b28e451fa7cfd19d9ba15ee00665a8d184c9647d810d",
+          "after": "a5e6c29b6537f2fdce081e1dd88702c949e93b82c902ca49da676c1bf4c03948"
+        },
+        "Rust/DeviceHubFFI/src/abi.rs": {
+          "before": "8dceca62d18e3357bd60187a497d78bc0043b630bf4ffa1c04e2b53de4dbc23c",
+          "after": "058f3a8b9c483a77893d17a1975e40096713dcc067e505f87af02f05e44bf3f4"
+        },
+        "Rust/DeviceHubFFI/src/model.rs": {
+          "before": "abe4f4652f5cea9c59d5f6fba22896bf7f70a180ede0fbfcde4476a2a1f0e9b7",
+          "after": "24db62e53b09aba9b66ad986264d7ef2d8f3c5b69c62dc9e2c93e0bb191e275d"
+        },
+        "Rust/DeviceHubFFI/src/session.rs": {
+          "before": "47cd88ca001cff8a38e2a5903a05d75cab0b1c42e8eb694ccde042f2b0715034",
+          "after": "ac3710df50f960ea153085b5d9081d0927556ebe20b2df330b8886df2c0801cc"
+        },
+        "Rust/DeviceHubFFI/src/protocol.rs": {
+          "before": "5ab0378f73996a9dfccdb02cc7505fa121aba6f64ac35e847fe63801c844e46a",
+          "after": "fadf0299f058f06281fd749cefa2e24b8c7ef74c68127b9c42e7d6a91ad48b00"
+        },
+        "Sources/DeviceHubLive/DeviceHubNativeInputMarshaller.swift": {
+          "before": "c987f9febd80ce1a7e344fd2632323be609ddc6332e1497dcc9b47393eea11c1",
+          "after": "58a4efea8fee66e3c44dac864793cb2fc1db63918bbf8dde20178dea132607de"
+        },
+        "Sources/DeviceHubLive/DeviceHubNativeSessionClient.swift": {
+          "before": "2764e4fbc7d6bd4cde69f824875d4d3eb48ca870405b8b84568a433dce270253",
+          "after": "eba53d68cff124b4f0432b70db16f7f8e47d03b68b763c57c1d68e64ce05f571"
+        }
+      }
+    }
+  }
+}

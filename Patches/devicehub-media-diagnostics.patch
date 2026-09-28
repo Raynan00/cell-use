@@ -1,0 +1,574 @@
+--- a/Packages/DeviceHubKit/Sources/DeviceHubMedia/DeviceHubMedia.swift
++++ b/Packages/DeviceHubKit/Sources/DeviceHubMedia/DeviceHubMedia.swift
+@@ -250,3 +250,80 @@
+         return containsSyncNALUnit
+     }
+ }
++
++
++/// Phone Probe's bounded diagnostics and explicit decoder-selection experiment.
++/// Selection is captured when each decoder is created; authentication is unchanged.
++public final class MediaFailureProbe: @unchecked Sendable {
++    public static let shared = MediaFailureProbe()
++
++    public enum DecoderMode: String, Codable, Sendable {
++        case systemDefault, softwareOnly
++    }
++
++    public struct DecoderConfiguration: Codable, Equatable, Sendable {
++        public let requestedMode: DecoderMode
++        public let hardwareAccelerated: Bool?
++        public let hardwareQueryStatus: Int32
++    }
++
++    public enum Source: String, Codable, Sendable {
++        case videoToolbox, decoderSubmission, decoderOutput, missingConfiguration
++        case nativeVideoFailure, nativeBufferSaturated, nativeInvalidAccessUnit, nativeInvalidConfiguration
++        case nativeInvalidSequence, nativeMissingConfiguration, nativeMultipleConsumers
++        case videoStreamEnded, frameStreamEnded
++        case videoConsumerFailure, frameConsumerFailure
++    }
++
++    public struct Event: Codable, Equatable, Sendable {
++        public let sequence: Int
++        public let source: Source
++        public let detail: String?
++        public let status: Int32?
++        public let nativeCode: String?
++        public let nativeStage: String?
++    }
++
++    private let lock = NSLock()
++    private var sequence = 0
++    private var entries: [(UUID, Event)] = []
++    private var selectedMode: DecoderMode = .systemDefault
++    private var configurations: [(UUID, DecoderConfiguration)] = []
++    public init() {}
++
++    public var decoderMode: DecoderMode {
++        get { lock.withLock { selectedMode } }
++        set { lock.withLock { selectedMode = newValue } }
++    }
++
++    public func recordConfiguration(generation: SessionGeneration, mode: DecoderMode,
++                                    hardwareAccelerated: Bool?, queryStatus: Int32) {
++        lock.withLock {
++            configurations.append((generation.rawValue, DecoderConfiguration(requestedMode: mode,
++                hardwareAccelerated: hardwareAccelerated, hardwareQueryStatus: queryStatus)))
++            if configurations.count > 16 { configurations.removeFirst(configurations.count - 16) }
++        }
++    }
++
++    public func decoderConfigurations(generation: SessionGeneration) -> [DecoderConfiguration] {
++        lock.withLock { configurations.filter { $0.0 == generation.rawValue }.map { $0.1 } }
++    }
++
++    public func record(generation: SessionGeneration, source: Source,
++                       error: MediaDecoderError? = nil, status: Int32? = nil,
++                       nativeCode: String? = nil, nativeStage: String? = nil) {
++        lock.withLock {
++            sequence += 1
++            // MediaDecoderError is a closed vocabulary with no payload strings.
++            let detail = error.map { String(describing: $0) }
++            entries.append((generation.rawValue,
++                Event(sequence: sequence, source: source, detail: detail, status: status,
++                      nativeCode: nativeCode, nativeStage: nativeStage)))
++            if entries.count > 32 { entries.removeFirst(entries.count - 32) }
++        }
++    }
++
++    public func snapshot(generation: SessionGeneration) -> [Event] {
++        lock.withLock { entries.filter { $0.0 == generation.rawValue }.map { $0.1 } }
++    }
++}
+--- a/Packages/DeviceHubKit/Sources/DeviceHubTransport/RemoteSessionMediaOperation.swift
++++ b/Packages/DeviceHubKit/Sources/DeviceHubTransport/RemoteSessionMediaOperation.swift
+@@ -26,6 +26,7 @@
+                         let decoder,
+                         let decoderConfiguration
+                     else {
++                        MediaFailureProbe.shared.record(generation: generation, source: .missingConfiguration)
+                         throw DeviceHubError.decoderFailed
+                     }
+                     try await decoder.decode(
+@@ -38,17 +39,36 @@
+                 case .discontinuity:
+                     try await resetDecoder()
+ 
+-                case .failed:
++                case let .failed(failure):
++                    switch failure.reason {
++                    case .bufferSaturated:
++                        MediaFailureProbe.shared.record(generation: generation, source: .nativeBufferSaturated)
++                    case .invalidAccessUnit:
++                        MediaFailureProbe.shared.record(generation: generation, source: .nativeInvalidAccessUnit)
++                    case .invalidConfiguration:
++                        MediaFailureProbe.shared.record(generation: generation, source: .nativeInvalidConfiguration)
++                    case .invalidSequence:
++                        MediaFailureProbe.shared.record(generation: generation, source: .nativeInvalidSequence)
++                    case .missingConfiguration:
++                        MediaFailureProbe.shared.record(generation: generation, source: .nativeMissingConfiguration)
++                    case .multipleConsumers:
++                        MediaFailureProbe.shared.record(generation: generation, source: .nativeMultipleConsumers)
++                    case let .native(native):
++                        MediaFailureProbe.shared.record(generation: generation, source: .nativeVideoFailure,
++                            nativeCode: native.code, nativeStage: native.stage)
++                    }
+                     throw DeviceHubError.decoderFailed
+ 
+                 case .finished:
+                     return
+                 }
+             }
++            MediaFailureProbe.shared.record(generation: generation, source: .videoStreamEnded)
+             throw DeviceHubError.decoderFailed
+         } catch is CancellationError {
+             return
+         } catch let error as MediaDecoderError {
++            MediaFailureProbe.shared.record(generation: generation, source: .decoderSubmission, error: error)
+             await terminateForMediaFailure(
+                 error.deviceHubError,
+                 stage: mediaDiagnosticStage(for: error)
+@@ -56,6 +76,7 @@
+         } catch let error as DeviceHubError {
+             await terminateForMediaFailure(error)
+         } catch {
++            MediaFailureProbe.shared.record(generation: generation, source: .videoConsumerFailure)
+             await terminateForMediaFailure(.decoderFailed)
+         }
+     }
+@@ -71,15 +92,18 @@
+             guard !Task.isCancelled else {
+                 return
+             }
++            MediaFailureProbe.shared.record(generation: generation, source: .frameStreamEnded)
+             await terminateForMediaFailure(.decoderFailed)
+         } catch is CancellationError {
+             return
+         } catch let error as MediaDecoderError {
++            MediaFailureProbe.shared.record(generation: generation, source: .decoderOutput, error: error)
+             await terminateForMediaFailure(
+                 error.deviceHubError,
+                 stage: mediaDiagnosticStage(for: error)
+             )
+         } catch {
++            MediaFailureProbe.shared.record(generation: generation, source: .frameConsumerFailure)
+             await terminateForMediaFailure(.decoderFailed)
+         }
+     }
+--- a/Packages/DeviceHubKit/Sources/DeviceHubMedia/HEVCVideoDecoder.swift
++++ b/Packages/DeviceHubKit/Sources/DeviceHubMedia/HEVCVideoDecoder.swift
+@@ -32,6 +32,7 @@
+     public nonisolated let frames: AsyncThrowingStream<RemoteDisplayFrame, Error>
+ 
+     private let generation: SessionGeneration
++    private let decoderMode: MediaFailureProbe.DecoderMode
+     private let gate: FrameDeliveryGate
+     private var nextPipelineToken: UInt64 = 1
+     private var nextPresentationTimeValue: Int64 = 0
+@@ -54,6 +55,7 @@
+         }
+         frames = pair.stream
+         self.generation = generation
++        self.decoderMode = MediaFailureProbe.shared.decoderMode
+         self.gate = gate
+     }
+ 
+@@ -141,6 +143,8 @@
+             completionHandler: completion
+         )
+         guard status == noErr else {
++            MediaFailureProbe.shared.record(generation: generation, source: .videoToolbox,
++                error: mediaSystemError(operation: .submitFrame, status: status), status: status)
+             DeviceHubMediaTrace.emit(
+                 "decoder_submit_failed status=\(status)"
+             )
+@@ -269,19 +273,39 @@
+             kCVPixelBufferIOSurfacePropertiesKey:
+                 [:] as CFDictionary
+         ] as CFDictionary
++        let specification: CFDictionary? = decoderMode == .softwareOnly
++            ? [kVTVideoDecoderSpecification_EnableHardwareAcceleratedVideoDecoder:
++                NSNumber(value: false)] as CFDictionary : nil
+         var session: VTDecompressionSession?
+         let creationStatus = VTDecompressionSessionCreate(
+             allocator: kCFAllocatorDefault,
+             formatDescription: formatDescription,
+-            decoderSpecification: nil,
++            decoderSpecification: specification,
+             imageBufferAttributes: attributes,
+             decompressionSessionOut: &session
+         )
+         guard creationStatus == noErr, let session else {
++            MediaFailureProbe.shared.record(generation: generation, source: .videoToolbox,
++                error: mediaSystemError(operation: .createDecompressionSession, status: creationStatus),
++                status: creationStatus)
+             throw mediaSystemError(
+                 operation: .createDecompressionSession,
+                 status: creationStatus
+             )
++        }
++
++        var hardwareValue: CFTypeRef?
++        let hardwareQueryStatus = VTSessionCopyProperty(session,
++            key: kVTDecompressionPropertyKey_UsingHardwareAcceleratedVideoDecoder,
++            allocator: kCFAllocatorDefault, valueOut: &hardwareValue)
++        let hardwareAccelerated = hardwareQueryStatus == noErr
++            ? (hardwareValue as? NSNumber)?.boolValue : nil
++        MediaFailureProbe.shared.recordConfiguration(generation: generation, mode: decoderMode,
++            hardwareAccelerated: hardwareAccelerated, queryStatus: hardwareQueryStatus)
++        // A software experiment must never silently run on a confirmed hardware decoder.
++        if decoderMode == .softwareOnly && hardwareAccelerated == true {
++            VTDecompressionSessionInvalidate(session)
++            throw MediaDecoderError.systemFailure(.createDecompressionSession, .unsupportedFormat)
+         }
+ 
+         let propertyStatus = VTSessionSetProperty(
+@@ -462,6 +486,8 @@
+             return
+         }
+         guard status == noErr else {
++            MediaFailureProbe.shared.record(generation: metadata.generation, source: .videoToolbox,
++                error: mediaSystemError(operation: .completeFrame, status: status), status: status)
+             fail(
+                 token: token,
+                 error: mediaSystemError(
+@@ -487,6 +513,9 @@
+             imageOut: &image
+         )
+         guard conversionStatus == noErr, let image else {
++            MediaFailureProbe.shared.record(generation: metadata.generation, source: .videoToolbox,
++                error: mediaSystemError(operation: .createImage, status: conversionStatus),
++                status: conversionStatus)
+             fail(
+                 token: token,
+                 error: mediaSystemError(
+--- a/Rust/DeviceHubFFI/include/device_hub_ffi.h
++++ b/Rust/DeviceHubFFI/include/device_hub_ffi.h
+@@ -214,6 +214,8 @@
+ #define DH_REMOTE_OPERATION_SCREENSHOT ((DhRemoteOperation)1)
+ #define DH_REMOTE_OPERATION_CONTROL_STREAM ((DhRemoteOperation)2)
+ #define DH_REMOTE_OPERATION_PAIR_VERIFY ((DhRemoteOperation)3)
++// Phone Probe: bounded PNG observation with authenticated tap input.
++#define DH_REMOTE_OPERATION_SCREENSHOT_PROBE ((DhRemoteOperation)4)
+ 
+ typedef uint32_t DhVideoNegotiationOutcome;
+ #define DH_VIDEO_NEGOTIATION_SUCCEEDED ((DhVideoNegotiationOutcome)1)
+--- a/Rust/DeviceHubFFI/src/abi.rs
++++ b/Rust/DeviceHubFFI/src/abi.rs
+@@ -348,6 +348,8 @@
+     ControlStream = 2,
+     /// Authenticate one discovered endpoint with Pair Verify and complete.
+     PairVerify = 3,
++    /// Phone Probe: bounded PNG observation with tap input, without video.
++    ScreenshotProbe = 4,
+ }
+ 
+ /// Result of configuring the caller-owned video receiver.
+--- a/Rust/DeviceHubFFI/src/model.rs
++++ b/Rust/DeviceHubFFI/src/model.rs
+@@ -348,6 +348,7 @@
+ /// Copied operation-specific state for an authenticated remote session.
+ #[derive(Clone, Debug)]
+ pub(crate) enum RemoteMode {
++    ScreenshotProbe,
+     Screenshot,
+     ControlStream,
+     PairVerify,
+@@ -479,6 +480,14 @@
+             "Video negotiator offer is invalid.",
+         )?;
+         let mode = match raw.operation {
++            value if value == crate::abi::DhRemoteOperation::ScreenshotProbe as u32 => {
++                if !offer.is_empty() {
++                    return Err(ValidationError::new(
++                        "Screenshot probes must not include a video negotiator offer.",
++                    ));
++                }
++                RemoteMode::ScreenshotProbe
++            }
+             value if value == crate::abi::DhRemoteOperation::Screenshot as u32 => {
+                 if !offer.is_empty() {
+                     return Err(ValidationError::new(
+@@ -947,6 +956,16 @@
+         );
+     }
+ 
++    #[test]
++    fn screenshot_probe_preserves_authentication_and_rejects_media_offers() {
++        let mode = crate::abi::DhRemoteOperation::ScreenshotProbe as u32;
++        let tag = matching_auth_tag();
++        assert!(matches!(copy_remote_operation(mode, &tag, &[]).unwrap().mode,
++                         RemoteMode::ScreenshotProbe));
++        assert!(copy_remote_operation(mode, &[3; 6], &[]).is_err());
++        assert!(copy_remote_operation(mode, &tag, b"unexpected-media-offer").is_err());
++    }
++
+     fn matching_auth_tag() -> [u8; 6] {
+         compute_auth_tag(&[2; 16], "2C59A560-57EB-48FA-8287-482A30ADE1A1")
+     }
+--- a/Rust/DeviceHubFFI/src/session.rs
++++ b/Rust/DeviceHubFFI/src/session.rs
+@@ -1172,7 +1172,7 @@
+     let is_control_stream = matches!(
+         &operation,
+         Operation::Remote(operation)
+-            if matches!(&operation.mode, crate::model::RemoteMode::ControlStream)
++            if matches!(&operation.mode, crate::model::RemoteMode::ControlStream | crate::model::RemoteMode::ScreenshotProbe)
+     );
+     let result = if is_control_stream {
+         Some(runtime.block_on(crate::protocol::run(
+--- a/Rust/DeviceHubFFI/src/protocol.rs
++++ b/Rust/DeviceHubFFI/src/protocol.rs
+@@ -402,6 +402,12 @@
+     let readiness = verify_developer_readiness(&mut adapter, &mut handshake).await?;
+ 
+     match operation.mode {
++        RemoteMode::ScreenshotProbe => {
++            let cancellation = cancellation.ok_or_else(|| PublicFailure::new(
++                "invalid_state", "png_input", false, "Missing owned cancellation channel."))?;
++            run_png_input_probe(&readiness, &mut adapter, &mut handshake, &emitter,
++                                controls, cancellation).await
++        }
+         RemoteMode::Screenshot => {
+             capture_screenshot(&readiness, &mut adapter, &mut handshake, &emitter).await?;
+             stage(
+@@ -469,7 +475,7 @@
+     provider: &mut impl RsdProvider,
+     handshake: &mut RsdHandshake,
+     emitter: &EventEmitter,
+-) -> Result<(), PublicFailure> {
++) -> Result<crate::png::PngDimensions, PublicFailure> {
+     emitter.phase(
+         DhConnectionPhase::CapturingScreenshot,
+         DhSessionState::Connected,
+@@ -494,7 +500,109 @@
+             "The target returned an invalid PNG screenshot.",
+         )
+     })?;
+-    emitter.screenshot(screenshot, dimensions)
++    emitter.screenshot(screenshot, dimensions)?;
++    Ok(dimensions)
++}
++
++// Phone Probe: PNG capture and authenticated input share one owned session.
++// The capture future is retained while input is serviced, never restarted by a tap.
++async fn run_png_input_probe(
++    readiness: &DeveloperReady,
++    adapter: &mut tcp::handle::AdapterHandle,
++    handshake: &mut RsdHandshake,
++    emitter: &EventEmitter,
++    mut controls: ControlGate,
++    mut cancellation: tokio::sync::watch::Receiver<bool>,
++) -> Result<(), PublicFailure> {
++    for name in [UNIVERSAL_HID_SERVICE, INDIGO_HID_SERVICE, ORIENTATION_SERVICE] {
++        require_prepared_service(handshake, name)?;
++    }
++    emitter.phase(DhConnectionPhase::OpeningInput, DhSessionState::Connected)?;
++    let mut universal_hid = stage(INPUT_TIMEOUT, input_service_connection_failed(),
++        UniversalHidServiceClient::connect_rsd(adapter, handshake)).await?;
++    let mut indigo_hid = stage(INPUT_TIMEOUT, input_service_connection_failed(),
++        IndigoHidClient::connect_rsd(adapter, handshake)).await?;
++    let mut orientation = stage(INPUT_TIMEOUT, orientation_service_connection_failed(),
++        OrientationServiceClient::connect_rsd(adapter, handshake)).await?;
++    let initial_orientation = stage(INPUT_TIMEOUT, orientation_state_failed(),
++        orientation.current_orientation()).await?;
++    let keyboard_service_id = stage(INPUT_TIMEOUT, input_service_connection_failed(),
++        universal_hid.create_keyboard_service(&KeyboardServiceConfiguration::default())).await?;
++    tokio::time::sleep(Duration::from_millis(300)).await;
++    controls.enable_input();
++    emitter.input_ready()?;
++    let mut cleanup = InputCleanupState::default();
++    let deadline = tokio::time::sleep(Duration::from_secs(120));
++    tokio::pin!(deadline);
++    let result = 'probe: loop {
++        let capture = async {
++            let dimensions = capture_screenshot(readiness, adapter, handshake, emitter).await?;
++            let mut geometry = DhDisplayGeometry {
++                pixel_width: dimensions.width, pixel_height: dimensions.height,
++                orientation: DhOrientation::Unknown as u32,
++                non_flat_orientation: DhOrientation::Unknown as u32,
++                orientation_locked: 0, reserved: [0; 7],
++            };
++            // This portrait-only experiment rejects rotated frames in the app.
++            update_geometry_orientation(&mut geometry, &initial_orientation)?;
++            emitter.display_geometry(geometry)?;
++            emitter.phase(DhConnectionPhase::Ready, DhSessionState::Connected)?;
++            tokio::time::sleep(Duration::from_secs(1)).await;
++            Ok::<(), PublicFailure>(())
++        };
++        tokio::pin!(capture);
++        loop {
++            tokio::select! {
++                biased;
++                _ = cancellation.changed() => break 'probe Ok(()),
++                _ = &mut deadline => break 'probe Ok(()),
++                command = controls.receive() => {
++                    let Some(command) = command else {
++                        break 'probe Err(PublicFailure::new("control_channel_closed",
++                            "png_input", false, "The input channel closed."));
++                    };
++                    // The PNG runtime admits touch, keyboard and cleanup only.
++                    if !png_input_command_allowed(&command) {
++                        break 'probe Err(PublicFailure::new("unsupported_probe_command",
++                            "png_input", false, "This runtime accepts touch, keyboard and cleanup."));
++                    }
++                    if let Err(failure) = handle_control_command(command, None, 0,
++                        &mut universal_hid, keyboard_service_id, &mut indigo_hid,
++                        &mut orientation, &mut cleanup).await {
++                        break 'probe Err(failure);
++                    }
++                }
++                outcome = &mut capture => {
++                    if let Err(failure) = outcome { break 'probe Err(failure); }
++                    break;
++                }
++            }
++        }
++    };
++    cleanup_inputs(&mut cleanup, &mut universal_hid, keyboard_service_id, &mut indigo_hid).await;
++    result
++}
++
++fn png_input_command_allowed(command: &ControlCommand) -> bool {
++    matches!(command, ControlCommand::Touch(_) | ControlCommand::Keyboard(_) |
++                     ControlCommand::ReleaseAllInput)
++}
++
++#[cfg(test)]
++mod png_input_tests {
++    use super::*;
++    #[test]
++    fn admits_gestures_keyboard_cleanup_but_not_video() {
++        for intent in [TouchIntent::Down { x: 1, y: 2 }, TouchIntent::Move { x: 2, y: 3 },
++                       TouchIntent::Up { x: 2, y: 3 }, TouchIntent::Cancel, TouchIntent::Tap { x: 1, y: 2 }] {
++            assert!(png_input_command_allowed(&ControlCommand::Touch(intent)));
++        }
++        assert!(png_input_command_allowed(&ControlCommand::Keyboard(KeyboardIntent::Tap { usage: 4, modifiers: 0 })));
++        assert!(png_input_command_allowed(&ControlCommand::ReleaseAllInput));
++        assert!(!png_input_command_allowed(&ControlCommand::VideoNegotiation));
++        assert!(!png_input_command_allowed(&ControlCommand::Rotate(RotationIntent::Left)));
++        assert!(!png_input_command_allowed(&ControlCommand::VideoControlDatagram(crate::model::VideoControlDatagram { bytes: vec![] })));
++    }
+ }
+ 
+ fn nonzero_video_ssrc(identifier: uuid::Uuid) -> u32 {
+@@ -737,7 +845,7 @@
+                 let trace_label = input_trace_label(&command);
+                 if let Err(failure) = handle_control_command(
+                         command,
+-                        &video_udp,
++                        Some(&video_udp),
+                         VIDEO_SENDER_PORT,
+                         &mut universal_hid,
+                         keyboard_service_id,
+@@ -1127,7 +1235,7 @@
+ #[allow(clippy::too_many_arguments)]
+ async fn handle_control_command(
+     command: ControlCommand,
+-    video_udp: &tcp::handle::UdpSocketHandle,
++    video_udp: Option<&tcp::handle::UdpSocketHandle>,
+     remote_video_port: u16,
+     universal_hid: &mut UniversalHidServiceClient<Box<dyn idevice::ReadWrite>>,
+     keyboard_service_id: u64,
+@@ -1137,6 +1245,7 @@
+ ) -> Result<(), PublicFailure> {
+     match command {
+         ControlCommand::VideoControlDatagram(datagram) => video_udp
++            .ok_or_else(video_control_delivery_failed)?
+             .send_to(remote_video_port, datagram.bytes)
+             .await
+             .map_err(|_| video_control_delivery_failed()),
+--- a/Sources/DeviceHubLive/DeviceHubNativeInputMarshaller.swift
++++ b/Sources/DeviceHubLive/DeviceHubNativeInputMarshaller.swift
+@@ -74,6 +74,7 @@
+ enum DeviceHubNativeRemoteOperation: Equatable, Sendable {
+     case controlStream
+     case pairVerify
++    case screenshotProbe
+ 
+     fileprivate var nativeValue: DhRemoteOperation {
+         switch self {
+@@ -81,6 +82,8 @@
+             DH_REMOTE_OPERATION_CONTROL_STREAM
+         case .pairVerify:
+             DH_REMOTE_OPERATION_PAIR_VERIFY
++        case .screenshotProbe:
++            DH_REMOTE_OPERATION_SCREENSHOT_PROBE
+         }
+     }
+ 
+@@ -88,7 +91,7 @@
+         switch self {
+         case .controlStream:
+             true
+-        case .pairVerify:
++        case .pairVerify, .screenshotProbe:
+             false
+         }
+     }
+--- a/Sources/DeviceHubLive/DeviceHubNativeSessionClient.swift
++++ b/Sources/DeviceHubLive/DeviceHubNativeSessionClient.swift
+@@ -9,8 +9,8 @@
+     /// Construction only validates the linked ABI. It does not read or change
+     /// pairing records, credentials, profiles, signing state, or any device.
+     @MainActor
+-    static func deviceHubLive() throws -> Self {
+-        try DeviceHubNativeSessionFactory(environment: .live).client
++    static func deviceHubLive(probeScreenshots: Bool = false) throws -> Self {
++        try DeviceHubNativeSessionFactory(environment: .live, probeScreenshots: probeScreenshots).client
+     }
+ }
+ 
+@@ -28,12 +28,13 @@
+     private enum ControlOnlySessionCreation {
+         case pairing(NativePairingSessionRequest)
+         case pairVerify(NativeRemoteSessionRequest)
++        case screenshotProbe(NativeRemoteSessionRequest)
+ 
+         var generation: SessionGeneration {
+             switch self {
+             case let .pairing(request):
+                 request.generation
+-            case let .pairVerify(request):
++            case let .pairVerify(request), let .screenshotProbe(request):
+                 request.generation
+             }
+         }
+@@ -44,6 +45,8 @@
+             switch self {
+             case let .pairing(request):
+                 try await executor.createPairing(request)
++            case let .screenshotProbe(request):
++                try await executor.createRemote(request, operation: .screenshotProbe)
+             case let .pairVerify(request):
+                 try await executor.createRemote(
+                     request,
+@@ -70,6 +73,7 @@
+     private static let eventBufferCapacity = 64
+ 
+     private let environment: Environment
++    private let probeScreenshots: Bool
+     private let nativeCapabilities: NativeSessionCapabilities
+ 
+     var client: NativeSessionClient {
+@@ -97,7 +101,8 @@
+         )
+     }
+ 
+-    init(environment: Environment) throws {
++    init(environment: Environment, probeScreenshots: Bool = false) throws {
++        self.probeScreenshots = probeScreenshots
+         let rawCapabilities = environment.functions.capabilities()
+         _ = try DeviceHubNativeABI(
+             version: environment.functions.abiVersion(),
+@@ -120,6 +125,9 @@
+     private func makeRemoteSession(
+         _ request: NativeRemoteSessionRequest
+     ) async throws(NativeSessionFailure) -> NativeSession {
++        if probeScreenshots {
++            return try await makeControlOnlySession(.screenshotProbe(request))
++        }
+         let relay = DeviceHubNativeSessionRelay()
+         let videoBridge: NativeVideoEventBridge
+         do {

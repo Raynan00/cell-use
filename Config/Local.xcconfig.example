@@ -1,0 +1,3 @@
+// Copy to Local.xcconfig on the Mac. This file is gitignored.
+PROBE_BUNDLE_ID = com.example.celluse
+PROBE_TEAM =

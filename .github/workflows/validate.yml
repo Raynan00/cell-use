@@ -1,0 +1,59 @@
+name: Validate cell-use
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - Runtime/**
+      - Examples/**
+      - Sources/**
+      - Tests/**
+      - Package.swift
+      - Scripts/**
+      - Config/**
+      - project.yml
+      - dependencies.json
+      - Patches/**
+      - .github/workflows/validate.yml
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    container: swift:6.4.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+      - run: swift test --package-path Runtime
+      - run: python3 Scripts/test-bootstrap.py
+  ios-build:
+    # Compile on GitHub's documented Xcode 27 preview image; no signing secrets.
+    # Deliberately opt-in because macOS minutes may count against the account.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare build tools
+        run: |
+          brew install xcodegen ripgrep
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup-init.sh
+            sh /tmp/rustup-init.sh -y --profile minimal --no-modify-path
+          fi
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - run: bash Scripts/build-macos.sh
+      - name: Preserve synthetic OCR fixture on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-ocr-fixture
+          path: '**/ocr-fixture-*.png'
+          include-hidden-files: true
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always() && !cancelled()
+        with:
+          name: unsigned-cell-use-demo
+          path: .build/cell-use-demo-unsigned.ipa
+          if-no-files-found: error

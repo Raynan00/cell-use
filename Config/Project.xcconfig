@@ -1,0 +1,3 @@
+PROBE_BUNDLE_ID = com.raynan.celluse
+PROBE_TEAM =
+#include? "Local.xcconfig"

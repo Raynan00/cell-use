@@ -1,0 +1,16 @@
+.build/
+.swiftpm/
+Runtime/.build/
+Runtime/.swiftpm/
+Runtime/Package.resolved
+Package.resolved
+DerivedData/
+*.xcodeproj/
+Config/Local.xcconfig
+*.ipa
+*.xcarchive/
+*.mobileprovision
+*.mobiledevicepairing
+*.p12
+*.p8
+__pycache__/
