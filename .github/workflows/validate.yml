@@ -24,6 +24,8 @@ jobs:
     container: swift:6.4.0
     steps:
       - uses: actions/checkout@v4
+      - name: Install bootstrap test tools
+        run: apt-get update -qq && apt-get install -y --no-install-recommends python3 git
       - run: swift test
       - run: swift test --package-path Runtime
       - run: python3 Scripts/test-bootstrap.py
