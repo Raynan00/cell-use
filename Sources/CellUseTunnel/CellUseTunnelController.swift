@@ -38,6 +38,16 @@ public final class CellUseTunnelController {
         self.manager = manager
         let existing = manager.protocolConfiguration as? NETunnelProviderProtocol
         let existingConfiguration = try? TunnelConfiguration(providerValues: existing?.providerConfiguration)
+        // A previous connection can still be stopping when the host retries.
+        // Wait for that same profile rather than asking the user to retry again.
+        if manager.connection.status == .disconnecting {
+            let deadline = ContinuousClock.now.advanced(by: .seconds(15))
+            while manager.connection.status == .disconnecting {
+                try checkCancellation()
+                guard ContinuousClock.now < deadline else { throw TunnelError.connectionTimedOut }
+                try await Task.sleep(for: .milliseconds(150))
+            }
+        }
         let state = manager.connection.status
         if state == .connected || state == .connecting || state == .reasserting {
             guard existingConfiguration == configuration else { throw TunnelError.configurationInUse }

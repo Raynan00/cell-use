@@ -31,6 +31,10 @@ See Apple's [Network Extension configuration](https://developer.apple.com/docume
 
 ## Start from your host app
 
+For tunnel startup through to a ready agent session, use
+[CellUseConnection](connection.md). It reuses saved pairings and provides setup
+states for your app's UI. The controller below is the lower-level tunnel API.
+
 Retain a controller for the lifetime of your connection:
 
 ```swift
