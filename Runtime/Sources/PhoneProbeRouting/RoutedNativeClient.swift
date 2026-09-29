@@ -2,7 +2,7 @@ import DeviceHubTransport
 import Foundation
 import PhoneProbeCore
 
-actor RouteDiagnostics {
+public actor RouteDiagnostics {
     struct Event: Encodable, Sendable {
         let sequence: Int
         let operation: String
@@ -19,7 +19,7 @@ actor RouteDiagnostics {
     }
     private var value: Snapshot
     private var sequence = 0
-    init(mode: ConnectionRoute.Mode) { value = Snapshot(mode: mode) }
+    public init(mode: ConnectionRoute.Mode) { value = Snapshot(mode: mode) }
     func snapshot() -> Snapshot { value }
     func path(_ path: VPNRouteStatus) { value.path = path }
     func record(_ operation: String, _ outcome: String, failure: NativeSessionFailure? = nil) {
@@ -32,7 +32,7 @@ actor RouteDiagnostics {
     }
 }
 
-enum RoutedNativeClient {
+public enum RoutedNativeClient {
     /// Change only the destination. Keep Bonjour identity, authentication tags,
     /// keys, target, and generation intact. Never fall back to unauthenticated I/O.
     static func request(_ request: NativeRemoteSessionRequest, route: ConnectionRoute)
@@ -50,7 +50,7 @@ enum RoutedNativeClient {
         }
     }
 
-    static func wrap(_ native: NativeSessionClient, route: ConnectionRoute,
+    public static func wrap(_ native: NativeSessionClient, route: ConnectionRoute,
         diagnostics: RouteDiagnostics,
         check: @escaping @Sendable (ConnectionRoute) -> VPNRouteStatus = VPNRouteCheck.status
     ) -> NativeSessionClient {

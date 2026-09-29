@@ -39,9 +39,14 @@ package.dependencies.append(.package(name: "CellUse", path: ".."))
 package.products.append(.library(name: "CellUseRuntime", targets: ["CellUseRuntime"]))
 package.targets.append(.target(name: "CellUseRuntime", dependencies: [
     .product(name: "CellUse", package: "CellUse"),
+    .product(name: "CellUseTunnel", package: "CellUse"),
+    "PhoneProbeRouting", "PhoneProbeCore",
     .product(name: "DeviceHubClient", package: "DeviceHubKit"),
     .product(name: "DeviceHubCore", package: "DeviceHubKit"),
-    .product(name: "DeviceHubMedia", package: "DeviceHubKit")
+    .product(name: "DeviceHubMedia", package: "DeviceHubKit"),
+    .product(name: "DeviceHubTransport", package: "DeviceHubKit"),
+    .product(name: "DeviceHubPersistence", package: "DeviceHubKit"),
+    .product(name: "DeviceHubDiagnostics", package: "DeviceHubKit")
 ], path: "Sources/CellUseRuntime"))
 package.targets.append(.testTarget(name: "CellUseRuntimeTests", dependencies: [
     "CellUseRuntime", .product(name: "CellUse", package: "CellUse"),

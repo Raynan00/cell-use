@@ -27,6 +27,14 @@ required DeviceHubLive, private-media and native-framework targets. Use this sou
 
 ## What your app manages
 
+For an embedded tunnel, use [CellUseConnection](connection.md) to manage tunnel
+startup, saved pairing, discovery, readiness and the session streams from your
+app. It supplies frames and input readiness to the runtime automatically.
+
+### Connecting an existing session directly
+
+The lower-level adapter below is useful when your app already manages a session.
+
 The host creates and owns the authenticated DeviceSession, local tunnel route,
 pairing records, developer-service preparation, discovery, event/frame streams,
 and OS background task. The runtime takes a session and an agent; it does not

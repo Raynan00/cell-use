@@ -2,14 +2,14 @@ import Darwin
 import Foundation
 import PhoneProbeCore
 
-enum VPNRouteStatus: String, Codable, Sendable {
+public enum VPNRouteStatus: String, Codable, Sendable {
     case direct, tunnel, localAddress, otherInterface, unavailable
 }
 
 /// UDP connect chooses a source through the routing table without sending data.
 /// A utun existing somewhere is insufficient: this destination must use it.
-enum VPNRouteCheck {
-    static func status(for route: ConnectionRoute) -> VPNRouteStatus {
+public enum VPNRouteCheck {
+    public static func status(for route: ConnectionRoute) -> VPNRouteStatus {
         guard route.mode != .direct else { return .direct }
         let descriptor = socket(AF_INET, SOCK_DGRAM, 0)
         guard descriptor >= 0 else { return .unavailable }
