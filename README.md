@@ -111,8 +111,19 @@ It is a developer library with an iPhone runtime, an optional embedded tunnel an
 example apps. You build and distribute your own app around it.
 
 **Which iOS version does it target?**
-The current native phone-control runtime targets iOS 27. The portable Swift API
-and tunnel component declare iOS 17 as their minimum version.
+The current native phone-control runtime requires iOS 27. The agent API and
+embedded tunnel are separate components with an iOS 17 deployment minimum:
+
+| Component | iOS minimum | What it provides |
+| --- | --- | --- |
+| `CellUse` | 17 | Agent interface, actions and execution loop |
+| `CellUseTunnel` | 17 | Local network route for the native connection |
+| `CellUseRuntime` and full-control demo | 27 | Screenshots and input through the pinned DeviceHub transport |
+
+For an app using the supplied phone-control runtime, use iOS 27 as the minimum.
+The iOS 17 package declarations alone do not provide cross-app control on iOS 17.
+See [version requirements](Docs/faq.md#why-does-the-native-runtime-require-ios-27)
+and [initial setup versus running an agent](Docs/setup.md#requirements).
 
 Read the [FAQ](Docs/faq.md) for integration, signing and model setup.
 

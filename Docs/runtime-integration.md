@@ -10,6 +10,11 @@ and connection, and use its configured device address as your local VPN peer.
 
 ## Packaging
 
+An app using this native adapter requires iOS 27. The root agent API and tunnel
+package have an iOS 17 deployment minimum, but the pinned DeviceHub transport and
+native framework used by this adapter target iOS 27. See
+[version requirements](faq.md#why-does-the-native-runtime-require-ios-27).
+
 The root Swift package provides `CellUse`, the portable agent API and runner.
 The `Runtime` package provides `CellUseRuntime`, the Apple session adapter.
 After cloning this repository, run `bash Scripts/build-macos.sh` on macOS with

@@ -7,15 +7,36 @@ Apple Developer Program signing team.
 
 ## Requirements
 
-- The current native demo targets iOS 27.0 and a physical iPhone. The demo is built with Xcode 27.
-- Developer Mode enabled, pairing completed and the matching personalized
-  developer image/services prepared. Installing the app alone does not do this.
-- LocalDevVPN enabled and its **Device IP** available. The tested configuration
-  was Device IP `10.7.0.1/32`, Tunnel IP `10.7.1.1/32`; use your app's actual values.
-- An unlocked phone, Wi-Fi, local-network permission and portrait rotation lock.
-- A signing route: Xcode on a Mac, or an unsigned release IPA signed with a tool
-  such as Sideloadly on Windows. Development used a free Apple account; signing
-  renewal and the requirements of your signing tool still apply.
+The full-control demo requires a physical iPhone running iOS 27.0. Its native
+runtime, pinned DeviceHub package and native framework build target iOS 27.
+The standalone `CellUse` and `CellUseTunnel` packages declare iOS 17; an app using
+the supplied native runtime uses the higher minimum. See
+[version requirements](faq.md#why-does-the-native-runtime-require-ios-27).
+
+### Initial device setup
+
+1. Sign and install the demo using Xcode on a Mac, or the unsigned release IPA
+   with a signing tool such as Sideloadly on Windows. Building from source uses
+   Xcode 27. The external-tunnel demo supports free-account signing; renewal
+   follows your signing tool's requirements.
+2. Enable Developer Mode and grant local-network permission.
+3. Prepare the matching personalized developer image/services, then pair the
+   app with the phone using the steps below. Installing the app alone does not
+   prepare these services.
+4. Configure LocalDevVPN for the released demo. For your own app, the
+   [embedded tunnel](embedded-tunnel.md) replaces the separate VPN installation.
+
+Pairing is saved for reconnection. Repeat preparation if a device update or
+service-readiness check requires it; renew signing when required by your account.
+
+### While an agent runs
+
+- Keep the phone unlocked, Developer Mode enabled and the local tunnel active.
+- For the reference demo, keep Wi-Fi enabled and portrait rotation locked.
+- Use the tunnel's actual **Device IP**. The tested external configuration was
+  Device IP `10.7.0.1/32`, Tunnel IP `10.7.1.1/32`.
+- The native control loop runs on the iPhone without a connected computer.
+  Internet access depends on the target apps and the model provider you choose.
 
 LocalDevVPN is a separate app, not included in cell-use:
 [App Store listing](https://apps.apple.com/us/app/localdevvpn/id6755608044).

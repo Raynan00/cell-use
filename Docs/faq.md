@@ -62,6 +62,37 @@ Choose `CellUse` to write an agent. Follow [runtime integration](runtime-integra
 to control a phone, and [embedded tunnel setup](embedded-tunnel.md) to package the
 connection inside your app.
 
+## Why does the native runtime require iOS 27?
+
+The minimum follows the supplied phone-control implementation. `Runtime/Package.swift`,
+the reference app and the pinned DeviceHub Swift package target iOS 27. The
+upstream native framework build and its verification script also specify 27.0.
+Apple documents the Device Hub nearby-device pairing flow used here for
+iOS 27 and later in the [Xcode 27 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27-release-notes).
+
+The root Swift package declares iOS 17 for the independent `CellUse` agent API
+and `CellUseTunnel` network route. Those components do not supply the native
+screenshot and input services on their own. Lowering the app's deployment target
+does not change the dependency or the services available on the phone.
+
+Supporting an earlier iOS release would require a compatible screenshot/input
+transport and pairing route, along with matching builds and device verification.
+The agent API can accommodate another adapter without changing the provider's
+decision interface.
+
+## Is extended background processing the reason for iOS 27?
+
+No. Apple introduced `BGContinuedProcessingTask` in iOS 26; see
+[Finish tasks in the background](https://developer.apple.com/videos/play/wwdc2025/227/).
+Background execution and native phone control have separate requirements.
+The current runtime's iOS 27 minimum applies to both ordinary and extended runs.
+
+## Does embedding the tunnel remove the other setup steps?
+
+It removes the separate LocalDevVPN installation. The native transport still
+uses Developer Mode, saved pairing and prepared developer services. See
+[setup](setup.md#requirements) for initial preparation and run-time requirements.
+
 ## What should I try first?
 
 The [scripted demos](demo.md) cover a Settings swipe, typing into a Notes draft
