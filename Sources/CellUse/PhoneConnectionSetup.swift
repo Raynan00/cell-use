@@ -70,6 +70,7 @@ public enum PhoneConnectionEvent: Sendable {
     private var operation: Task<Void, Never>?
     private var monitor: Task<Void, Never>?
     private var cleanup: Task<Void, Never>?
+    private var disconnection: Task<Void, Never>?
     private var generation = UUID()
     private var stopping = false
     private var preparing = false
@@ -103,6 +104,14 @@ public enum PhoneConnectionEvent: Sendable {
     public func pair() { begin(pairing: true, deviceID: nil) }
 
     public func disconnect() async {
+        if let disconnection { await disconnection.value; return }
+        let task = Task { await self.closeConnection() }
+        disconnection = task
+        await task.value
+        disconnection = nil
+    }
+
+    private func closeConnection() async {
         if let cleanup { await cleanup.value }
         guard !stopping else { return }
         stopping = true; generation = UUID(); observing = false
@@ -118,7 +127,7 @@ public enum PhoneConnectionEvent: Sendable {
     }
 
     private func begin(pairing: Bool, deviceID: String?) {
-        guard !preparing, operation == nil, !stopping, !observing else { return }
+        guard disconnection == nil, !preparing, operation == nil, !stopping, !observing else { return }
         preparing = true
         let token = UUID(); generation = token
         frame = nil; inputReady = false; waitingSince = nil

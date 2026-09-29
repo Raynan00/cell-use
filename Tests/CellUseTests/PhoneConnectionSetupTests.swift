@@ -10,7 +10,9 @@ import Testing
     var tunnelIssue: PhoneSetupIssue?
     var onOpen: (() -> Void)?
     var delayedOpen = false
+    var delayedClose = false
     var suspended: CheckedContinuation<Void, Never>?
+    var closing: CheckedContinuation<Void, Never>?
     func startTunnel() async throws { calls.append("tunnel"); if let tunnelIssue { throw tunnelIssue } }
     func savedDevices() async throws -> [PhonePairedDevice] { calls.append("saved"); return devices }
     func pair(onCode: @escaping @MainActor (String) -> Void) async throws -> PhonePairedDevice {
@@ -23,7 +25,10 @@ import Testing
         if delayedOpen { await withCheckedContinuation { suspended = $0 } }
         onOpen?()
     }
-    func close() async { calls.append("close") }
+    func close() async {
+        calls.append("close")
+        if delayedClose { await withCheckedContinuation { closing = $0 } }
+    }
 }
 
 @MainActor private func settle(_ condition: @escaping @MainActor () -> Bool) async throws {
@@ -167,4 +172,22 @@ private enum WaitFailure: Error { case timedOut }
     try await settle { setup.state == .needsAction(.tunnel) }
     #expect(driver.calls == ["close", "tunnel", "close"])
     await setup.disconnect()
+}
+
+@Test @MainActor func concurrentDisconnectsBothWaitForTeardown() async throws {
+    let driver = SetupDriver()
+    let connection = PhoneConnectionSetup(driver: driver)
+    connection.connect()
+    try await settle { connection.state == .checkingReadiness }
+    driver.delayedClose = true
+    let first = Task { await connection.disconnect() }
+    try await settle { driver.closing != nil }
+    var secondFinished = false
+    let second = Task { await connection.disconnect(); secondFinished = true }
+    for _ in 0..<10 { await Task.yield() }
+    #expect(!secondFinished)
+    driver.delayedClose = false; driver.closing?.resume(); driver.closing = nil
+    await first.value; await second.value
+    #expect(connection.state == .idle)
+    #expect(driver.calls.filter { $0 == "close" }.count == 2)
 }
