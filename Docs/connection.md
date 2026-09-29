@@ -42,6 +42,10 @@ Keep the pairing service identifier stable between app versions. Credentials
 remain in the native Keychain vault. A saved pairing is reused on subsequent
 connections; the controller does not delete pairings when a connection fails.
 
+The default diagnostics recorder keeps a bounded buffer in memory and has no
+file storage or upload destination. Pass your own `DiagnosticRecorder` to the
+initializer if your app manages diagnostic retention.
+
 ## Show the next action in your UI
 
 | State | Host UI |

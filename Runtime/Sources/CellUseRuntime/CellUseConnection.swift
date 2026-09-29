@@ -44,20 +44,19 @@ import UIKit
 
     /// Supply NativeSessionClient.deviceHubLive(probeScreenshots: true) from the
     /// app's DeviceHubLive target. All remaining connection composition lives here.
-    public init(configuration: Configuration, nativeSessions: NativeSessionClient) throws {
+    public init(configuration: Configuration, nativeSessions: NativeSessionClient,
+                diagnostics: DiagnosticRecorder? = nil) throws {
         guard !configuration.appName.isEmpty, !configuration.pairingService.isEmpty,
               !configuration.providerBundleIdentifier.isEmpty else { throw PhoneSetupIssue.failed }
         let route = try ConnectionRoute(mode: .localVPN, peer: configuration.tunnel.deviceAddress)
-        let directory = try FileManager.default.url(for: .applicationSupportDirectory,
-            in: .userDomainMask, appropriateFor: nil, create: true)
-        let diagnostics = try DeviceHubDiagnosticsRuntime.live(applicationSupportDirectory: directory)
+        let recorder = try diagnostics ?? ConnectionDiagnostics.makeRecorder()
         let native = RoutedNativeClient.wrap(nativeSessions, route: route,
             diagnostics: RouteDiagnostics(mode: route.mode))
         let transport = try DeviceHubTransportConfiguration(controllerDisplayName: configuration.appName,
             controllerModel: "Mac17,7", remoteTargetPolicy: .authenticatedDevices)
         let persistence = PairingPersistenceClient.live(descriptor: .pairingVault(service: configuration.pairingService))
         let client = DeviceHubClient.live(nativeSessions: native, configuration: transport,
-            diagnostics: diagnostics.recorder, pairingPersistence: persistence)
+            diagnostics: recorder, pairingPersistence: persistence)
         driver = NativeConnectionDriver(client: client,
             tunnel: CellUseTunnelController(providerBundleIdentifier: configuration.providerBundleIdentifier),
             configuration: configuration.tunnel, displayName: configuration.appName)
