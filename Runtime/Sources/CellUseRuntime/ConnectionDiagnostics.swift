@@ -18,7 +18,9 @@ enum ConnectionDiagnostics {
         return try DiagnosticRecorder(context: context,
             policy: DiagnosticRetentionPolicy(maximumEventCount: 128, maximumEncodedByteCount: 65_536),
             persistence: DiagnosticPersistenceClient(load: { nil }, save: { _ in }, clear: {}),
-            uploader: DiagnosticUploadClient(upload: { _ in throw .invalidConfiguration }),
+            uploader: DiagnosticUploadClient(upload: { (_: Data) async throws(DiagnosticUploadFailure) in
+                throw .invalidConfiguration
+            }),
             now: Date.init)
     }
 }
